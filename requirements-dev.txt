@@ -1,0 +1,115 @@
+# Development and Testing Requirements
+# Last Updated: 2025-06-08
+
+# Include production requirements
+-r requirements-prod.txt
+
+# ============================================================================
+# TESTING FRAMEWORKS
+# ============================================================================
+
+# Core testing framework
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+pytest-cov>=6.0.0
+pytest-mock>=3.14.0
+
+# Test coverage reporting
+coverage[toml]>=7.6.0
+
+# ============================================================================
+# CODE QUALITY AND FORMATTING
+# ============================================================================
+
+# Code formatter - SECURITY UPDATE
+# Fixed: ReDoS vulnerability in string parsing
+black>=24.3.0
+
+# Import sorting
+isort>=5.13.0
+
+# Linting
+flake8>=7.1.0
+flake8-docstrings>=1.7.0
+flake8-bugbear>=24.0.0
+
+# Type checking
+mypy>=1.13.0
+
+# Security linting
+bandit>=1.8.0
+
+# ============================================================================
+# DEVELOPMENT TOOLS
+# ============================================================================
+
+# Auto-reload for development
+watchdog>=6.0.0
+
+# IPython for debugging
+ipython>=8.31.0
+
+# Pre-commit hooks
+pre-commit>=4.0.0
+
+# ============================================================================
+# DOCUMENTATION
+# ============================================================================
+
+# API documentation
+mkdocs>=1.6.0
+mkdocs-material>=9.5.0
+
+# ============================================================================
+# SECURITY AUDITING
+# ============================================================================
+
+# Dependency vulnerability scanning
+pip-audit>=2.9.0
+
+# Additional security checking
+safety>=3.2.0
+
+# ============================================================================
+# PERFORMANCE PROFILING
+# ============================================================================
+
+# Memory profiling
+memory-profiler>=0.61.0
+
+# Performance profiling
+py-spy>=0.4.0
+
+# ============================================================================
+# DATABASE TOOLS
+# ============================================================================
+
+# Database inspection
+sqlalchemy-utils>=0.41.0
+
+# ============================================================================
+# NOTES
+# ============================================================================
+#
+# Development-only dependencies that are NOT deployed to production:
+# - Testing frameworks (pytest, coverage)
+# - Code quality tools (black, flake8, mypy)
+# - Security scanners (pip-audit, bandit, safety)
+# - Development utilities (ipython, watchdog)
+#
+# To install development environment:
+#   pip install -r requirements-dev.txt
+#
+# To run tests:
+#   pytest
+#
+# To check code quality:
+#   black .
+#   isort .
+#   flake8
+#   mypy app
+#
+# To run security audit:
+#   pip-audit
+#   bandit -r app
+#   safety check

@@ -1,0 +1,112 @@
+name: Security Audit
+
+on:
+  # Run on every push to main/master
+  push:
+    branches: [main, master]
+  
+  # Run on pull requests
+  pull_request:
+    branches: [main, master]
+  
+  # Run weekly on Monday at 9 AM UTC
+  schedule:
+    - cron: '0 9 * * 1'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      
+      - name: Upgrade pip and setuptools
+        run: |
+          python -m pip install --upgrade pip>=25.3 setuptools>=78.1.1
+      
+      - name: Install production dependencies
+        run: |
+          pip install -r requirements-prod.txt
+      
+      - name: Install security audit tools
+        run: |
+          pip install pip-audit safety bandit
+      
+      - name: Run security audit script
+        id: audit
+        run: |
+          chmod +x scripts/security_audit.sh
+          ./scripts/security_audit.sh || echo "exit_code=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Upload audit reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports-py${{ matrix.python-version }}
+          path: security-reports/
+          retention-days: 90
+      
+      - name: Run bandit security linting
+        run: |
+          bandit -r app -f json -o security-reports/bandit-report.json || true
+          bandit -r app
+        continue-on-error: true
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Read the latest summary report
+            const reports = fs.readdirSync('security-reports')
+              .filter(f => f.startsWith('summary_'))
+              .sort()
+              .reverse();
+            
+            if (reports.length > 0) {
+              const summary = fs.readFileSync(`security-reports/${reports[0]}`, 'utf8');
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🔐 Security Audit Results\n\n${summary}`
+              });
+            }
+      
+      - name: Fail if critical vulnerabilities found
+        if: steps.audit.outputs.exit_code == '1'
+        run: |
+          echo "❌ Security audit failed: Critical or high-severity vulnerabilities detected"
+          exit 1
+
+  dependency-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0

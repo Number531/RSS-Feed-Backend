@@ -1,0 +1,45 @@
+# RSS Feed Backend - Requirements
+# 
+# IMPORTANT: This file now uses a split requirements structure:
+# - requirements-prod.txt: Production dependencies (SECURITY HARDENED)
+# - requirements-dev.txt: Development + Production dependencies
+#
+# For production deployment:
+#   pip install -r requirements-prod.txt
+#
+# For local development:
+#   pip install -r requirements-dev.txt
+#
+# Legacy compatibility: This file still includes all dependencies
+# but you should migrate to using requirements-prod.txt or requirements-dev.txt
+
+# Production requirements (security hardened)
+-r requirements-prod.txt
+
+# Development and testing (if needed)
+# Uncomment for local development:
+# -r requirements-dev.txt
+
+# ============================================================================
+# MIGRATION NOTES
+# ============================================================================
+# 
+# Security Updates Applied (2025-06-08):
+# - 89 vulnerabilities identified and addressed
+# - Critical auth/HTTP/network libraries upgraded
+# - Added explicit security constraints for transitive deps
+# - Split into prod/dev for better dependency management
+#
+# Old versions backed up to: requirements.txt.backup
+#
+# Key Changes:
+# - authlib: 1.2.1 → 1.6.5 (CRITICAL security fixes)
+# - fastapi: 0.104.1 → 0.115.0+ (starlette security)
+# - uvicorn: 0.24.0 → 0.32.0+ (h11 security)
+# - httpx: 0.25.1 → 0.28.0+ (h11, h2, certifi fixes)
+# - black: 23.11.0 → 24.3.0+ (ReDoS fix)
+# - Added: h11, h2, certifi, idna, urllib3, starlette constraints
+# - Added: sentry-sdk, prometheus for monitoring
+#
+# To verify security improvements:
+#   pip-audit

@@ -1,0 +1,146 @@
+# Production Requirements - Security Hardened
+# Last Updated: 2025-06-08
+# Security Audit: Applied critical patches for 89 vulnerabilities
+
+# ============================================================================
+# CORE WEB FRAMEWORK
+# ============================================================================
+
+# FastAPI - Upgraded for starlette security fixes
+fastapi>=0.115.0
+
+# Uvicorn - Upgraded for h11 security fixes
+uvicorn[standard]>=0.32.0
+
+# Multipart form data handling
+python-multipart>=0.0.9
+
+# ============================================================================
+# DATABASE
+# ============================================================================
+
+# SQLAlchemy ORM
+sqlalchemy>=2.0.35
+
+# Database migrations
+alembic>=1.14.0
+
+# PostgreSQL adapters
+psycopg2-binary>=2.9.10
+asyncpg>=0.30.0
+
+# ============================================================================
+# REDIS AND CACHING
+# ============================================================================
+
+redis>=5.2.0
+hiredis>=2.4.1
+
+# ============================================================================
+# TASK QUEUE
+# ============================================================================
+
+celery>=5.4.0
+# celery-beat is built into celery, no separate package needed
+
+# ============================================================================
+# RSS FEED PARSING
+# ============================================================================
+
+feedparser>=6.0.11
+beautifulsoup4>=4.12.3
+lxml>=5.3.0
+
+# ============================================================================
+# HTTP CLIENT
+# ============================================================================
+
+# HTTPX - Upgraded for h11, h2, certifi, idna security fixes
+httpx>=0.28.0
+
+# ============================================================================
+# AUTHENTICATION & SECURITY
+# ============================================================================
+
+# JWT/JWS handling
+python-jose[cryptography]>=3.3.0
+
+# Password hashing
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.0,<5.0.0  # Pin to 4.x for passlib 1.7.4 compatibility
+
+# Environment variables
+python-dotenv>=1.0.1
+
+# Data validation
+pydantic[email]>=2.10.0
+pydantic-settings>=2.6.0
+
+# OAuth/JWT - CRITICAL SECURITY UPDATE
+# Fixed: JWE zip bomb DoS, JWS segment DoS, critical header bypass
+authlib>=1.6.5
+
+# ============================================================================
+# EXTERNAL SERVICES
+# ============================================================================
+
+# Supabase client (optional)
+supabase>=2.11.0
+
+# ============================================================================
+# SECURITY CONSTRAINTS (Transitive Dependencies)
+# ============================================================================
+# These ensure minimum secure versions of indirect dependencies
+
+# HTTP/Network Security
+h11>=0.16.0          # Request smuggling fixes
+h2>=4.3.0            # HTTP/2 request splitting fixes
+certifi>=2024.7.4    # Untrusted root cert removal
+idna>=3.7            # DoS fix
+urllib3>=2.5.0       # Multiple security fixes
+starlette>=0.47.2    # Recent security patches
+
+# ============================================================================
+# MONITORING AND LOGGING
+# ============================================================================
+
+# Structured logging
+python-json-logger>=2.0.7
+
+# Error tracking (add your Sentry DSN to .env)
+sentry-sdk[fastapi]>=2.20.0
+
+# Prometheus metrics
+prometheus-fastapi-instrumentator>=7.0.0
+
+# ============================================================================
+# UTILITIES
+# ============================================================================
+
+# Date and time handling
+python-dateutil>=2.9.0
+pytz>=2024.2
+
+# HTML sanitization
+bleach>=6.2.0
+
+# CLI utilities
+click>=8.1.8
+
+# ============================================================================
+# NOTES
+# ============================================================================
+# 
+# Security Updates Applied:
+# - authlib: 1.2.1 → 1.6.5 (CRITICAL: auth bypass, DoS fixes)
+# - fastapi: 0.104.1 → 0.115.0 (pulls starlette 0.47.2+)
+# - uvicorn: 0.24.0 → 0.32.0 (pulls h11 0.16.0+)
+# - httpx: 0.25.1 → 0.28.0 (pulls h11, h2, certifi, idna fixes)
+# - Added explicit constraints for transitive deps
+# - Added sentry-sdk and prometheus for monitoring
+#
+# To install:
+#   pip install -r requirements-prod.txt
+#
+# To audit:
+#   pip-audit

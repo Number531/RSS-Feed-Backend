@@ -89,3 +89,21 @@ security-reports/
 *.backup
 .env.staging
 STAGING_CREDENTIALS.txt
+
+# IDE - Additional
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python cache - Additional
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# OS - Additional
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db

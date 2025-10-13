@@ -208,7 +208,7 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Generate secure keys
-./generate_secrets.sh
+./scripts/setup/generate_secrets.sh
 
 # Edit .env with your configuration
 vim .env  # or nano, code, etc.
@@ -243,7 +243,7 @@ docker-compose -f docker/docker-compose.dev.yml --profile tools up -d
 alembic upgrade head
 
 # Seed with sample data (optional)
-python seed_database.py
+python scripts/database/seed_database.py
 ```
 
 ### 5️⃣ Run the Server
@@ -304,9 +304,9 @@ open htmlcov/index.html
 
 ```bash
 # Test scripts available
-./test_endpoints_complete.sh    # All endpoints
-./test_bookmark_api.sh          # Bookmarks
-./test_voting_api.py            # Voting system
+./scripts/testing/test_endpoints_complete.sh    # All endpoints
+./scripts/testing/test_bookmark_api.sh          # Bookmarks
+./scripts/utilities/test_voting_api.py          # Voting system
 ```
 
 ---

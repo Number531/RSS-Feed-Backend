@@ -1,0 +1,77 @@
+name: 📚 Documentation
+description: Report missing, unclear, or incorrect documentation
+title: "[Docs]: "
+labels: ["documentation"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve our documentation! Let us know what's missing or unclear.
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation needs improvement?
+      options:
+        - API Documentation
+        - README
+        - Architecture Guide
+        - Contributing Guide
+        - Deployment Guide
+        - Code Comments
+        - Tutorial/Guide
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Link to the documentation or file path
+      placeholder: "e.g., README.md line 45, /docs/api.md"
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What's the issue?
+      description: Describe what's missing, unclear, or incorrect
+      placeholder: |
+        The documentation for endpoint X is missing...
+        Section Y is unclear because...
+        The example in Z doesn't work...
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Improvement
+      description: How would you improve it?
+      placeholder: |
+        Add an example showing...
+        Clarify that...
+        Include information about...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information
+      placeholder: |
+        - Screenshots
+        - Links to related docs
+        - External references
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you like to work on this?
+      options:
+        - label: I would like to improve this documentation
+          required: false

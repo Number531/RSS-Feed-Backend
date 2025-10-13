@@ -1,0 +1,147 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Help us understand your idea.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm the following before submitting
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have checked the documentation to see if this feature exists
+          required: true
+        - label: This feature would benefit multiple users, not just me
+          required: false
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem? Please describe.
+      placeholder: |
+        I'm always frustrated when...
+        Currently, users cannot...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like
+      placeholder: |
+        I would like to see...
+        The feature should work by...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe alternatives you've considered
+      placeholder: |
+        Alternative 1: ...
+        Alternative 2: ...
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: Which area does this feature affect?
+      options:
+        - API/Endpoints
+        - Authentication/Security
+        - Database/Models
+        - Performance
+        - Testing
+        - Documentation
+        - DevOps/Deployment
+        - User Experience
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Critical (blocking my work)
+        - High (important for my use case)
+        - Medium (would be nice to have)
+        - Low (minor improvement)
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Describe specific use cases for this feature
+      placeholder: |
+        Use Case 1: As a user, I want to...
+        Use Case 2: As a developer, I need to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: api-design
+    attributes:
+      label: API Design (if applicable)
+      description: If this is an API feature, sketch out the endpoint design
+      render: python
+      placeholder: |
+        # Example endpoint
+        @router.post("/api/v1/feature")
+        async def new_feature(data: FeatureRequest):
+            """Description of what this does."""
+            pass
+
+  - type: textarea
+    id: mockup
+    attributes:
+      label: Mockup/Examples
+      description: Add mockups, examples, or code snippets
+      placeholder: |
+        Paste images, code examples, or API response examples here
+
+  - type: textarea
+    id: breaking-changes
+    attributes:
+      label: Breaking Changes
+      description: Would this introduce any breaking changes?
+      placeholder: |
+        Yes/No
+        If yes, describe the impact...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or links
+      placeholder: |
+        - Related documentation
+        - Similar features in other projects
+        - External resources
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you like to work on this?
+      options:
+        - label: I would like to implement this feature
+          required: false
+        - label: I can provide additional research/requirements
+          required: false

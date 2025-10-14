@@ -6,7 +6,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com)
-[![Tests](https://img.shields.io/badge/tests-51%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/tests-110%20passed-brightgreen.svg)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](./tests)
 [![Security](https://img.shields.io/badge/security-audited-success.svg)](./SECURITY_AUDIT_REPORT.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
@@ -28,8 +28,8 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 
 ### ✨ Key Highlights
 
-- **51 RESTful API Endpoints** - Comprehensive API coverage
-- **95% Test Coverage** - Robust testing with 51 passing tests
+- **60 RESTful API Endpoints** - Comprehensive API coverage (includes RSS Feed Management)
+- **95% Test Coverage** - Robust testing with 110 passing tests
 - **JWT Authentication** - Secure token-based auth with refresh
 - **Reddit-Style Features** - Voting, comments, bookmarks
 - **Real-Time Notifications** - WebSocket support
@@ -97,12 +97,14 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 | **Authentication** | 3 | Login, register, token refresh |
 | **Users** | 4 | Profile management, preferences |
 | **Articles** | 3 | Feed, search, article details |
+| **RSS Feeds** | 6 | Feed CRUD, categories, health metrics (admin) |
+| **Subscriptions** | 5 | Subscribe, unsubscribe, preferences |
 | **Votes** | 3 | Upvote/downvote articles |
 | **Comments** | 11 | CRUD, voting, threaded replies |
 | **Bookmarks** | 8 | Save, organize, manage collections |
 | **Reading History** | 8 | Track views, stats, recommendations |
 | **Notifications** | 9 | Real-time user notifications |
-| **Total** | **51** | Fully tested and documented |
+| **Total** | **60** | Fully tested and documented |
 
 ### Interactive Documentation
 
@@ -151,7 +153,7 @@ graph TB
 ```
 backend/
 ├── 📁 app/
-│   ├── api/v1/           # 🔌 API endpoints (51 endpoints)
+│   ├── api/v1/           # 🔌 API endpoints (60 endpoints)
 │   │   ├── endpoints/    # Route handlers
 │   │   └── api.py        # API router aggregation
 │   ├── core/             # ⚙️ Configuration & security
@@ -164,7 +166,7 @@ backend/
 │   ├── middleware/       # 🔧 Request/response middleware
 │   └── utils/            # 🛠️ Helper utilities
 ├── 📁 alembic/           # 🔄 Database migrations (4 migrations)
-├── 📁 tests/             # 🧪 Test suite (51 tests, 95% coverage)
+├── 📁 tests/             # 🧪 Test suite (110 tests, 95% coverage)
 │   ├── unit/             # Unit tests
 │   └── integration/      # Integration tests
 ├── 📁 frontend-api-reference/  # 📚 Frontend API docs
@@ -458,7 +460,7 @@ Do not open public issues for security concerns.
 
 | Component | Status | Coverage |
 |-----------|--------|----------|
-| API Endpoints | ✅ Complete | 51/51 |
+| API Endpoints | ✅ Complete | 60/60 |
 | Test Suite | ✅ Passing | 95% |
 | Security | ✅ Audited | Strong |
 | Documentation | ✅ Comprehensive | 80+ docs |

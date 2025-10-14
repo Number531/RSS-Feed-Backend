@@ -1,14 +1,13 @@
-"""
-API v1 router aggregator.
-"""
+"""API v1 router aggregator."""
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, votes, comments, articles, users, bookmarks, reading_history, notifications
+from app.api.v1.endpoints import auth, votes, comments, articles, users, bookmarks, reading_history, notifications, rss_feeds
 
 api_router = APIRouter()
 
 # Include all endpoint routers
 api_router.include_router(auth.router, prefix="/auth", tags=["authentication"])
+api_router.include_router(rss_feeds.router)  # Already has prefix and tags in router definition
 api_router.include_router(votes.router, prefix="/votes", tags=["votes"])
 api_router.include_router(comments.router, prefix="/comments", tags=["comments"])
 api_router.include_router(articles.router, prefix="/articles", tags=["articles"])

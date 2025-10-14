@@ -218,3 +218,59 @@ async def test_article(client: AsyncClient, db_session: AsyncSession) -> dict:
         "title": article.title,
         "url": article.url
     }
+
+
+@pytest.fixture
+async def admin_user(client: AsyncClient, db_session: AsyncSession) -> dict:
+    """Create an admin user for testing."""
+    from app.models.user import User
+    from uuid import uuid4
+    
+    # Create admin user directly
+    admin = User(
+        id=uuid4(),
+        username="adminuser",
+        email="admin@example.com",
+        is_active=True,
+        is_superuser=True
+    )
+    admin.set_password("adminpassword123")
+    
+    db_session.add(admin)
+    await db_session.commit()
+    await db_session.refresh(admin)
+    
+    # Login to get token
+    login_data = {
+        "email": "admin@example.com",
+        "password": "adminpassword123"
+    }
+    response = await client.post("/api/v1/auth/login", json=login_data)
+    assert response.status_code == 200
+    
+    token_data = response.json()
+    
+    return {
+        "username": admin.username,
+        "email": admin.email,
+        "token": token_data["access_token"],
+        "user_id": str(admin.id)
+    }
+
+
+@pytest.fixture
+async def admin_token(admin_user: dict) -> str:
+    """Get admin access token."""
+    return admin_user["token"]
+
+
+@pytest.fixture
+async def auth_token(test_user: dict) -> str:
+    """Get regular user access token."""
+    return test_user["token"]
+
+
+@pytest.fixture
+async def db(db_session: AsyncSession) -> AsyncSession:
+    """Alias for db_session to match test expectations."""
+    return db_session

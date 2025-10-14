@@ -189,3 +189,26 @@ async def get_current_user_optional(
         return user
     
     return None
+
+
+async def get_current_admin_user(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """
+    Get current admin user (superuser only).
+    
+    Args:
+        current_user: Current user from JWT
+        
+    Returns:
+        Current admin user
+        
+    Raises:
+        HTTPException: If user is not a superuser
+    """
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required for this action"
+        )
+    return current_user

@@ -168,19 +168,17 @@ async def auth_headers_2(test_user_2: dict) -> dict:
 
 
 @pytest.fixture
-async def authenticated_user(test_user: dict) -> tuple:
+async def authenticated_user(test_user: dict, db_session: AsyncSession) -> tuple:
     """Get authenticated regular user (not admin) as (User, token) tuple."""
     from app.models.user import User
     from uuid import UUID
     from sqlalchemy import select
-    from app.db.session import AsyncSessionLocal
     
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(User).where(User.id == UUID(test_user["user_id"]))
-        )
-        user = result.scalar_one()
-        return user, test_user["token"]
+    result = await db_session.execute(
+        select(User).where(User.id == UUID(test_user["user_id"]))
+    )
+    user = result.scalar_one()
+    return user, test_user["token"]
 
 
 @pytest.fixture

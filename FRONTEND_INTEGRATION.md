@@ -164,6 +164,138 @@ Query Parameters:
 
 ---
 
+### Search & Discovery
+
+#### Search Articles
+**GET** `/api/v1/search`
+
+Perform full-text search across article titles, descriptions, and content.
+
+Query Parameters:
+- `q` (string, required) - Search query
+- `page` (int, default: 1) - Page number
+- `page_size` (int, default: 20, max: 100) - Items per page
+- `category` (string, optional) - Filter by category
+- `sort_by` (string, default: `relevance`) - Sort by: `relevance`, `date`, `popularity`
+
+```json
+// Example: GET /api/v1/search?q=machine+learning&category=technology&page=1
+
+// Response (200 OK)
+{
+  "results": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Introduction to Machine Learning",
+      "url": "https://example.com/ml-intro",
+      "description": "Learn the basics of machine learning...",
+      "content": "Machine learning is a subset of artificial intelligence...",
+      "author": "Jane Smith",
+      "published_date": "2025-10-14T08:00:00Z",
+      "category": "technology",
+      "image_url": "https://example.com/ml.jpg",
+      "source_name": "TechBlog",
+      "vote_score": 156,
+      "vote_count": 200,
+      "comment_count": 32,
+      "user_vote": null,
+      "is_bookmarked": false,
+      "relevance_score": 0.87,  // Search relevance (0-1)
+      "created_at": "2025-10-14T08:05:00Z"
+    }
+  ],
+  "total": 47,
+  "page": 1,
+  "page_size": 20,
+  "total_pages": 3,
+  "query": "machine learning"
+}
+```
+
+#### Get Trending Articles
+**GET** `/api/v1/search/trending`
+
+Get articles with high engagement (votes and comments) in recent time periods.
+
+Query Parameters:
+- `time_range` (string, default: `day`) - Options: `hour`, `day`, `week`, `month`
+- `category` (string, optional) - Filter by category
+- `limit` (int, default: 10, max: 50) - Number of trending articles
+
+```json
+// Example: GET /api/v1/search/trending?time_range=day&limit=10
+
+// Response (200 OK)
+{
+  "trending": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Breaking: Major Tech Announcement",
+      "url": "https://example.com/breaking-news",
+      "description": "Tech giant announces revolutionary product...",
+      "content": "Full article content...",
+      "author": "News Reporter",
+      "published_date": "2025-10-15T09:00:00Z",
+      "category": "technology",
+      "image_url": "https://example.com/tech.jpg",
+      "source_name": "TechNews",
+      "vote_score": 487,
+      "vote_count": 550,
+      "comment_count": 125,
+      "user_vote": 1,
+      "is_bookmarked": false,
+      "trending_score": 0.95,  // Trending score (0-1)
+      "created_at": "2025-10-15T09:05:00Z"
+    }
+  ],
+  "time_range": "day",
+  "total": 10
+}
+```
+
+#### Get Popular Articles
+**GET** `/api/v1/search/popular`
+
+Get most upvoted articles with consistent high scores.
+
+Query Parameters:
+- `time_range` (string, default: `week`) - Options: `day`, `week`, `month`, `year`, `all`
+- `category` (string, optional) - Filter by category
+- `min_votes` (int, default: 10) - Minimum vote count threshold
+- `limit` (int, default: 20, max: 100) - Number of popular articles
+
+```json
+// Example: GET /api/v1/search/popular?time_range=week&limit=20
+
+// Response (200 OK)
+{
+  "popular": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "The Future of AI: A Comprehensive Guide",
+      "url": "https://example.com/ai-future",
+      "description": "Exploring the future developments in AI...",
+      "content": "Artificial intelligence continues to evolve...",
+      "author": "AI Expert",
+      "published_date": "2025-10-10T14:00:00Z",
+      "category": "technology",
+      "image_url": "https://example.com/ai.jpg",
+      "source_name": "AIDaily",
+      "vote_score": 892,
+      "vote_count": 1050,
+      "comment_count": 234,
+      "user_vote": null,
+      "is_bookmarked": true,
+      "created_at": "2025-10-10T14:05:00Z"
+    }
+  ],
+  "time_range": "week",
+  "total": 20
+}
+```
+
+---
+
 ### Voting
 
 #### Cast Vote on Article

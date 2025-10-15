@@ -28,11 +28,12 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 
 ### ✨ Key Highlights
 
-- **57 RESTful API Endpoints** - Comprehensive API coverage
+- **60 RESTful API Endpoints** - Comprehensive API coverage including search
 - **44 RSS News Sources** - Diverse feeds across 10 categories
-- **95% Test Coverage** - Robust testing with 135+ passing tests
+- **95% Test Coverage** - Robust testing with 146+ passing tests
 - **JWT Authentication** - Secure token-based auth with refresh
 - **Reddit-Style Features** - Voting, comments, bookmarks
+- **Full-Text Search** - PostgreSQL-powered content discovery
 - **Real-Time Notifications** - WebSocket support
 - **Production-Ready** - Security audited and deployment-ready
 - **Comprehensive Docs** - 80+ documentation files
@@ -56,7 +57,8 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 #### 📰 Content Management
 - RSS feed aggregation
 - Article categorization
-- Full-text search
+- Full-text search & discovery
+- Trending & popular articles
 - Content deduplication
 
 </td>
@@ -98,13 +100,14 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 || **Authentication** | 3 | Login, register, token refresh |
 || **Users** | 4 | Profile management, preferences |
 || **Articles** | 3 | Feed, search, article details |
+|| **Search & Discovery** | 3 | Full-text search, trending, popular articles |
 || **RSS Feeds** | 8 | Listing, subscriptions, categories (44 active sources) |
 || **Votes** | 3 | Upvote/downvote articles |
 || **Comments** | 11 | CRUD, voting, threaded replies |
 || **Bookmarks** | 8 | Save, organize, manage collections |
 || **Reading History** | 8 | Track views, stats, recommendations |
 || **Notifications** | 9 | Real-time user notifications |
-|| **Total** | **57** | Fully tested and documented |
+|| **Total** | **60** | Fully tested and documented |
 
 ### Interactive Documentation
 

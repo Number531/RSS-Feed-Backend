@@ -15,6 +15,7 @@ from app.models.user import User
 from app.tasks.rss_tasks import fetch_all_feeds, fetch_single_feed
 from app.core.celery_app import celery_app
 from app.services.rss_source_service import RSSSourceService
+from app.repositories.rss_source_repository import RSSSourceRepository
 from app.schemas.rss_source import RSSSourceCreate, RSSSourceUpdate, RSSSourceResponse
 
 router = APIRouter()
@@ -200,7 +201,8 @@ async def create_rss_source(
     
     **Admin only**
     """
-    service = RSSSourceService(db)
+    repository = RSSSourceRepository(db)
+    service = RSSSourceService(repository)
     return await service.create_source(source_data)
 
 
@@ -216,7 +218,8 @@ async def update_rss_source(
     
     **Admin only**
     """
-    service = RSSSourceService(db)
+    repository = RSSSourceRepository(db)
+    service = RSSSourceService(repository)
     updated_source = await service.update_source(feed_id, source_data)
     
     if not updated_source:
@@ -239,7 +242,8 @@ async def delete_rss_source(
     
     **Admin only**
     """
-    service = RSSSourceService(db)
+    repository = RSSSourceRepository(db)
+    service = RSSSourceService(repository)
     deleted = await service.delete_source(feed_id)
     
     if not deleted:
@@ -263,9 +267,10 @@ async def get_feeds_health(
     
     **Admin only**
     """
-    service = RSSSourceService(db)
-    sources = await service.get_all_sources_with_stats()
+    repository = RSSSourceRepository(db)
+    sources, total = await repository.get_all(skip=0, limit=1000)  # Get all sources
     
+    # Calculate health metrics
     healthy = [s for s in sources if s.is_healthy]
     unhealthy = [s for s in sources if not s.is_healthy and s.is_active]
     inactive = [s for s in sources if not s.is_active]
@@ -282,8 +287,9 @@ async def get_feeds_health(
                 "name": s.name,
                 "url": s.url,
                 "success_rate": s.success_rate,
-                "last_fetch_status": s.last_fetch_status,
-                "last_fetched_at": s.last_fetched_at.isoformat() if s.last_fetched_at else None
+                "consecutive_failures": s.consecutive_failures,
+                "last_fetched": s.last_fetched.isoformat() if s.last_fetched else None,
+                "last_successful_fetch": s.last_successful_fetch.isoformat() if s.last_successful_fetch else None
             }
             for s in unhealthy
         ]

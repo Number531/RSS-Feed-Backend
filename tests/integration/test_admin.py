@@ -179,7 +179,6 @@ class TestRSSSourceManagement:
             "url": "https://example.com/feed.xml",
             "source_name": "Test Feed",
             "category": "technology",
-            "description": "Test feed description",
             "is_active": True
         }
         
@@ -207,7 +206,7 @@ class TestRSSSourceManagement:
         token = admin_user["token"]
         
         update_data = {
-            "description": "Updated description",
+            "name": "Updated Feed Name",
             "is_active": False
         }
         
@@ -220,7 +219,7 @@ class TestRSSSourceManagement:
         assert response.status_code == 200
         data = response.json()
         
-        assert data["description"] == update_data["description"]
+        assert data["name"] == update_data["name"]
         assert data["is_active"] == update_data["is_active"]
     
     async def test_update_nonexistent_source(
@@ -236,7 +235,7 @@ class TestRSSSourceManagement:
         response = await client.put(
             f"/api/v1/admin/feeds/{fake_id}",
             headers={"Authorization": f"Bearer {token}"},
-            json={"description": "test"}
+            json={"name": "test"}
         )
         
         assert response.status_code == 404

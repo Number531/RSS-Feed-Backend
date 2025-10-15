@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 from app.models.article import Article
 from app.models.rss_source import RSSSource
+from tests.utils import generate_url_hash
 
 
 @pytest.mark.integration
@@ -38,6 +39,7 @@ class TestSearchEndpoint:
                 rss_source_id=source.id,
                 title="Machine Learning Tutorial",
                 url="https://example.com/ml-tutorial",
+                url_hash=generate_url_hash("https://example.com/ml-tutorial"),
                 description="Learn about machine learning algorithms",
                 content="Deep dive into machine learning",
                 category="technology",
@@ -48,6 +50,7 @@ class TestSearchEndpoint:
                 rss_source_id=source.id,
                 title="Python Programming Guide",
                 url="https://example.com/python-guide",
+                url_hash=generate_url_hash("https://example.com/python-guide"),
                 description="Complete Python programming tutorial",
                 content="Learn Python from scratch",
                 category="technology",
@@ -58,6 +61,7 @@ class TestSearchEndpoint:
                 rss_source_id=source.id,
                 title="Web Development Best Practices",
                 url="https://example.com/web-dev",
+                url_hash=generate_url_hash("https://example.com/web-dev"),
                 description="Modern web development techniques",
                 content="Best practices for building websites",
                 category="technology",
@@ -118,6 +122,7 @@ class TestSearchEndpoint:
             rss_source_id=tech_source.id,
             title="Technology News Article",
             url="https://example.com/tech-news",
+            url_hash=generate_url_hash("https://example.com/tech-news"),
             description="Latest in technology",
             content="Technology update",
             category="technology"
@@ -126,6 +131,7 @@ class TestSearchEndpoint:
             rss_source_id=politics_source.id,
             title="Politics News Article",
             url="https://example.com/politics-news",
+            url_hash=generate_url_hash("https://example.com/politics-news"),
             description="Latest in politics",
             content="Politics update",
             category="politics"
@@ -165,10 +171,12 @@ class TestSearchEndpoint:
         
         # Create multiple articles
         for i in range(15):
+            url = f"https://example.com/article-{i}"
             article = Article(
                 rss_source_id=source.id,
                 title=f"Test Article {i}",
-                url=f"https://example.com/article-{i}",
+                url=url,
+                url_hash=generate_url_hash(url),
                 description="Test article description",
                 content="Test article content",
                 category="technology"
@@ -248,6 +256,7 @@ class TestTrendingEndpoint:
                 rss_source_id=source.id,
                 title="Trending Article 1",
                 url="https://example.com/trending-1",
+                url_hash=generate_url_hash("https://example.com/trending-1"),
                 description="Hot trending article",
                 content="Trending content",
                 category="technology",
@@ -259,6 +268,7 @@ class TestTrendingEndpoint:
                 rss_source_id=source.id,
                 title="Trending Article 2",
                 url="https://example.com/trending-2",
+                url_hash=generate_url_hash("https://example.com/trending-2"),
                 description="Another trending article",
                 content="More trending content",
                 category="technology",
@@ -356,6 +366,7 @@ class TestPopularEndpoint:
                 rss_source_id=source.id,
                 title="Most Popular Article",
                 url="https://example.com/popular-1",
+                url_hash=generate_url_hash("https://example.com/popular-1"),
                 description="Most popular",
                 content="Very popular content",
                 category="technology",
@@ -365,6 +376,7 @@ class TestPopularEndpoint:
                 rss_source_id=source.id,
                 title="Second Popular Article",
                 url="https://example.com/popular-2",
+                url_hash=generate_url_hash("https://example.com/popular-2"),
                 description="Second most popular",
                 content="Popular content",
                 category="technology",
@@ -374,6 +386,7 @@ class TestPopularEndpoint:
                 rss_source_id=source.id,
                 title="Third Popular Article",
                 url="https://example.com/popular-3",
+                url_hash=generate_url_hash("https://example.com/popular-3"),
                 description="Third most popular",
                 content="Less popular content",
                 category="technology",

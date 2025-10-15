@@ -168,6 +168,91 @@ async def auth_headers_2(test_user_2: dict) -> dict:
 
 
 @pytest.fixture
+async def authenticated_user(test_user: dict) -> tuple:
+    """Get authenticated regular user (not admin) as (User, token) tuple."""
+    from app.models.user import User
+    from uuid import UUID
+    from sqlalchemy import select
+    from app.db.session import AsyncSessionLocal
+    
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(User).where(User.id == UUID(test_user["user_id"]))
+        )
+        user = result.scalar_one()
+        return user, test_user["token"]
+
+
+@pytest.fixture
+async def sample_rss_source(db_session: AsyncSession):
+    """Create a sample RSS source for testing."""
+    from app.models.rss_source import RSSSource
+    from uuid import uuid4
+    
+    source = RSSSource(
+        id=uuid4(),
+        name="Test Source",
+        url="https://example.com/feed.xml",
+        source_name="Example Source",
+        category="technology",
+        is_active=True
+    )
+    db_session.add(source)
+    await db_session.commit()
+    await db_session.refresh(source)
+    return source
+
+
+@pytest.fixture
+async def sample_rss_sources(db_session: AsyncSession) -> list:
+    """Create multiple RSS sources for testing."""
+    from app.models.rss_source import RSSSource
+    from uuid import uuid4
+    
+    sources = [
+        RSSSource(
+            id=uuid4(),
+            name="Tech Source 1",
+            url="https://example.com/tech1.xml",
+            source_name="TechSource1",
+            category="technology",
+            is_active=True
+        ),
+        RSSSource(
+            id=uuid4(),
+            name="Science Source 1",
+            url="https://example.com/science1.xml",
+            source_name="ScienceSource1",
+            category="science",
+            is_active=True
+        ),
+        RSSSource(
+            id=uuid4(),
+            name="Inactive Source",
+            url="https://example.com/inactive.xml",
+            source_name="InactiveSource",
+            category="technology",
+            is_active=False
+        ),
+    ]
+    
+    for source in sources:
+        db_session.add(source)
+    await db_session.commit()
+    
+    for source in sources:
+        await db_session.refresh(source)
+    
+    return sources
+
+
+@pytest.fixture
+async def test_db(db_session: AsyncSession) -> AsyncSession:
+    """Alias for db_session for compatibility."""
+    return db_session
+
+
+@pytest.fixture
 async def test_article(client: AsyncClient, db_session: AsyncSession) -> dict:
     """Create a test article with unique URLs."""
     from app.models.article import Article

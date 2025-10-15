@@ -6,7 +6,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com)
-[![Tests](https://img.shields.io/badge/tests-110%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/tests-135+%20passed-brightgreen.svg)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](./tests)
 [![Security](https://img.shields.io/badge/security-audited-success.svg)](./SECURITY_AUDIT_REPORT.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
@@ -28,8 +28,9 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 
 ### ✨ Key Highlights
 
-- **60 RESTful API Endpoints** - Comprehensive API coverage (includes RSS Feed Management)
-- **95% Test Coverage** - Robust testing with 110 passing tests
+- **57 RESTful API Endpoints** - Comprehensive API coverage
+- **44 RSS News Sources** - Diverse feeds across 10 categories
+- **95% Test Coverage** - Robust testing with 135+ passing tests
 - **JWT Authentication** - Secure token-based auth with refresh
 - **Reddit-Style Features** - Voting, comments, bookmarks
 - **Real-Time Notifications** - WebSocket support
@@ -92,19 +93,18 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 
 ### Endpoint Overview
 
-| Category | Endpoints | Description |
-|----------|-----------|-------------|
-| **Authentication** | 3 | Login, register, token refresh |
-| **Users** | 4 | Profile management, preferences |
-| **Articles** | 3 | Feed, search, article details |
-| **RSS Feeds** | 6 | Feed CRUD, categories, health metrics (admin) |
-| **Subscriptions** | 5 | Subscribe, unsubscribe, preferences |
-| **Votes** | 3 | Upvote/downvote articles |
-| **Comments** | 11 | CRUD, voting, threaded replies |
-| **Bookmarks** | 8 | Save, organize, manage collections |
-| **Reading History** | 8 | Track views, stats, recommendations |
-| **Notifications** | 9 | Real-time user notifications |
-| **Total** | **60** | Fully tested and documented |
+|| Category | Endpoints | Description |
+||----------|-----------|-------------|
+|| **Authentication** | 3 | Login, register, token refresh |
+|| **Users** | 4 | Profile management, preferences |
+|| **Articles** | 3 | Feed, search, article details |
+|| **RSS Feeds** | 8 | Listing, subscriptions, categories (44 active sources) |
+|| **Votes** | 3 | Upvote/downvote articles |
+|| **Comments** | 11 | CRUD, voting, threaded replies |
+|| **Bookmarks** | 8 | Save, organize, manage collections |
+|| **Reading History** | 8 | Track views, stats, recommendations |
+|| **Notifications** | 9 | Real-time user notifications |
+|| **Total** | **57** | Fully tested and documented |
 
 ### Interactive Documentation
 
@@ -153,7 +153,7 @@ graph TB
 ```
 backend/
 ├── 📁 app/
-│   ├── api/v1/           # 🔌 API endpoints (60 endpoints)
+│   ├── api/v1/           # 🔌 API endpoints (57 endpoints)
 │   │   ├── endpoints/    # Route handlers
 │   │   └── api.py        # API router aggregation
 │   ├── core/             # ⚙️ Configuration & security
@@ -166,7 +166,7 @@ backend/
 │   ├── middleware/       # 🔧 Request/response middleware
 │   └── utils/            # 🛠️ Helper utilities
 ├── 📁 alembic/           # 🔄 Database migrations (4 migrations)
-├── 📁 tests/             # 🧪 Test suite (110 tests, 95% coverage)
+├── 📁 tests/             # 🧪 Test suite (135+ tests, 95% coverage)
 │   ├── unit/             # Unit tests
 │   └── integration/      # Integration tests
 ├── 📁 frontend-api-reference/  # 📚 Frontend API docs

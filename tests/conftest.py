@@ -357,3 +357,204 @@ async def auth_token(test_user: dict) -> str:
 async def db(db_session: AsyncSession) -> AsyncSession:
     """Alias for db_session to match test expectations."""
     return db_session
+
+
+@pytest.fixture
+async def test_article_with_fact_check(client: AsyncClient, db_session: AsyncSession) -> dict:
+    """Create a test article with a basic fact-check."""
+    from app.models.article import Article
+    from app.models.rss_source import RSSSource
+    from app.models.fact_check import FactCheck
+    from uuid import uuid4
+    from datetime import datetime
+    import hashlib
+    
+    unique_id = uuid4().hex[:8]
+    
+    # Create RSS source
+    source = RSSSource(
+        id=uuid4(),
+        name=f"Test Source Feed {unique_id}",
+        url=f"https://example.com/feed-{unique_id}.xml",
+        source_name=f"Test Source {unique_id}",
+        category="general",
+        is_active=True
+    )
+    db_session.add(source)
+    await db_session.commit()
+    
+    # Create article
+    url = f"https://example.com/test-{unique_id}"
+    article = Article(
+        id=uuid4(),
+        rss_source_id=source.id,
+        title=f"Test Article {unique_id}",
+        url=url,
+        url_hash=hashlib.sha256(url.encode()).hexdigest(),
+        description="Test article description",
+        content="Test article content",
+        author="Test Author",
+        published_date=datetime.utcnow(),
+        category="Technology",
+        vote_score=0,
+        vote_count=0,
+        comment_count=0
+    )
+    db_session.add(article)
+    await db_session.commit()
+    
+    # Create fact-check
+    fact_check = FactCheck(
+        id=uuid4(),
+        article_id=article.id,
+        job_id=f"test-job-{unique_id}",
+        verdict="TRUE",
+        credibility_score=85,
+        confidence=0.9,
+        summary="Test fact-check summary",
+        claims_analyzed=1,
+        claims_validated=1,
+        claims_true=1,
+        claims_false=0,
+        claims_misleading=0,
+        claims_unverified=0,
+        validation_results={
+            "claim": "Test claim",
+            "verdict": "TRUE",
+            "confidence": 0.9,
+            "key_evidence": {
+                "supporting": ["Evidence 1"],
+                "contradicting": [],
+                "context": []
+            },
+            "references": [
+                {
+                    "citation_id": 1,
+                    "title": "Test Source",
+                    "url": "https://example.com",
+                    "source": "Test News",
+                    "credibility": "HIGH"
+                }
+            ]
+        },
+        num_sources=10,
+        source_consensus="STRONG_AGREEMENT",
+        validation_mode="summary",
+        processing_time_seconds=100,
+        api_costs={"total": 0.005},
+        fact_checked_at=datetime.utcnow()
+    )
+    db_session.add(fact_check)
+    await db_session.commit()
+    await db_session.refresh(article)
+    
+    return {
+        "id": str(article.id),
+        "title": article.title,
+        "url": article.url,
+        "fact_check_id": str(fact_check.id)
+    }
+
+
+@pytest.fixture
+async def test_article_with_complete_fact_check(client: AsyncClient, db_session: AsyncSession) -> dict:
+    """Create a test article with a complete fact-check (all fields populated)."""
+    from app.models.article import Article
+    from app.models.rss_source import RSSSource
+    from app.models.fact_check import FactCheck
+    from uuid import uuid4
+    from datetime import datetime
+    import hashlib
+    
+    unique_id = uuid4().hex[:8]
+    
+    # Create RSS source
+    source = RSSSource(
+        id=uuid4(),
+        name=f"Test Source Feed {unique_id}",
+        url=f"https://example.com/feed-{unique_id}.xml",
+        source_name=f"Test Source {unique_id}",
+        category="general",
+        is_active=True
+    )
+    db_session.add(source)
+    await db_session.commit()
+    
+    # Create article
+    url = f"https://example.com/test-complete-{unique_id}"
+    article = Article(
+        id=uuid4(),
+        rss_source_id=source.id,
+        title=f"Complete Test Article {unique_id}",
+        url=url,
+        url_hash=hashlib.sha256(url.encode()).hexdigest(),
+        description="Complete test article description",
+        content="Complete test article content",
+        author="Test Author",
+        published_date=datetime.utcnow(),
+        category="Technology",
+        vote_score=0,
+        vote_count=0,
+        comment_count=0
+    )
+    db_session.add(article)
+    await db_session.commit()
+    
+    # Create complete fact-check with all optional fields
+    fact_check = FactCheck(
+        id=uuid4(),
+        article_id=article.id,
+        job_id=f"test-job-complete-{unique_id}",
+        verdict="MISLEADING",
+        credibility_score=45,
+        confidence=0.75,
+        summary="Complete test fact-check with all fields",
+        claims_analyzed=5,
+        claims_validated=5,
+        claims_true=2,
+        claims_false=1,
+        claims_misleading=2,
+        claims_unverified=0,
+        validation_results={
+            "claim": "Complete test claim",
+            "verdict": "MISLEADING",
+            "confidence": 0.75,
+            "key_evidence": {
+                "supporting": ["Evidence 1", "Evidence 2"],
+                "contradicting": ["Counter evidence"],
+                "context": ["Context info"]
+            },
+            "references": [
+                {
+                    "citation_id": 1,
+                    "title": "Source 1",
+                    "url": "https://example.com/1",
+                    "source": "News Outlet 1",
+                    "credibility": "HIGH"
+                },
+                {
+                    "citation_id": 2,
+                    "title": "Source 2",
+                    "url": "https://example.com/2",
+                    "source": "News Outlet 2",
+                    "credibility": "MEDIUM"
+                }
+            ]
+        },
+        num_sources=25,
+        source_consensus="MIXED",
+        validation_mode="thorough",
+        processing_time_seconds=200,
+        api_costs={"total": 0.015, "api_calls": 10},
+        fact_checked_at=datetime.utcnow()
+    )
+    db_session.add(fact_check)
+    await db_session.commit()
+    await db_session.refresh(article)
+    
+    return {
+        "id": str(article.id),
+        "title": article.title,
+        "url": article.url,
+        "fact_check_id": str(fact_check.id)
+    }

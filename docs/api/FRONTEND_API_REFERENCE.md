@@ -607,6 +607,159 @@ Returns:
 
 ---
 
+### Get Fact-Check Details
+
+**GET** `/articles/{article_id}/fact-check`
+
+Retrieve complete fact-check information for a specific article.
+
+**Authentication:** Not required
+
+**Path Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `article_id` | UUID | Article identifier |
+
+**Response:** `200 OK`
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "article_id": "650e8400-e29b-41d4-a716-446655440001",
+  "job_id": "9aa51885-c336-4de0-aa17-88a1944379c7",
+  "verdict": "TRUE",
+  "credibility_score": 87,
+  "confidence": 0.9,
+  "summary": "The UK did announce its decision to cede sovereignty of the Chagos Islands to Mauritius on 3 October 2024...",
+  "claims_analyzed": 1,
+  "claims_validated": 1,
+  "claims_true": 1,
+  "claims_false": 0,
+  "claims_misleading": 0,
+  "claims_unverified": 0,
+  "validation_results": {
+    "claim": "The UK announced its decision to cede sovereignty...",
+    "verdict": "TRUE",
+    "confidence": 0.9,
+    "key_evidence": {
+      "supporting": [
+        "Official UK government announcement on 3 October 2024",
+        "Confirmed by multiple news agencies"
+      ],
+      "contradicting": [],
+      "context": [
+        "Historic sovereignty dispute since 1960s"
+      ]
+    },
+    "references": [
+      {
+        "citation_id": 1,
+        "title": "UK announces historic sovereignty agreement",
+        "url": "https://example.com/source1",
+        "source": "AP News",
+        "credibility": "HIGH"
+      },
+      {
+        "citation_id": 2,
+        "title": "Chagos Islands sovereignty transfer confirmed",
+        "url": "https://example.com/source2",
+        "source": "Reuters",
+        "credibility": "HIGH"
+      }
+    ]
+  },
+  "num_sources": 25,
+  "source_consensus": "STRONG_AGREEMENT",
+  "validation_mode": "summary",
+  "processing_time_seconds": 137,
+  "api_costs": {"total": 0.008},
+  "fact_checked_at": "2025-10-19T14:22:54Z",
+  "created_at": "2025-10-19T14:22:55Z",
+  "updated_at": "2025-10-19T14:22:55Z"
+}
+```
+
+**Response Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Unique fact-check identifier |
+| `article_id` | UUID | Article being fact-checked |
+| `job_id` | string | External fact-check service job ID |
+| `verdict` | string | Primary verdict (TRUE, FALSE, MISLEADING, etc.) |
+| `credibility_score` | integer | 0-100 credibility rating |
+| `confidence` | float | AI confidence level (0.0-1.0), nullable |
+| `summary` | string | Brief summary of findings |
+| `claims_analyzed` | integer | Total claims extracted, nullable |
+| `claims_validated` | integer | Claims that were validated, nullable |
+| `claims_true` | integer | True claims count, nullable |
+| `claims_false` | integer | False claims count, nullable |
+| `claims_misleading` | integer | Misleading claims count, nullable |
+| `claims_unverified` | integer | Unverified claims count, nullable |
+| `validation_results` | object | Complete validation data with evidence |
+| `num_sources` | integer | Number of sources consulted, nullable |
+| `source_consensus` | string | Source agreement level, nullable |
+| `validation_mode` | string | Validation mode used (summary/standard/thorough), nullable |
+| `processing_time_seconds` | integer | Processing duration, nullable |
+| `api_costs` | object | API costs breakdown, nullable |
+| `fact_checked_at` | datetime | When fact-check completed |
+| `created_at` | datetime | Record creation timestamp |
+| `updated_at` | datetime | Record update timestamp |
+
+**Validation Results Structure:**
+
+The `validation_results` field contains the complete fact-check report:
+
+```typescript
+interface ValidationResults {
+  claim: string;                    // Full claim text
+  verdict: string;                  // Claim verdict
+  confidence: number;               // AI confidence (0.0-1.0)
+  key_evidence: {
+    supporting: string[];           // Supporting evidence
+    contradicting: string[];        // Contradicting evidence
+    context: string[];              // Additional context
+  };
+  references: Array<{              // Source citations
+    citation_id: number;
+    title: string;
+    url: string;
+    source: string;                // Source publication name
+    credibility: "HIGH" | "MEDIUM" | "LOW";
+  }>;
+}
+```
+
+**Errors:**
+- `404 Not Found`: No fact-check exists for this article
+- `422 Unprocessable Entity`: Invalid article_id format
+
+**Usage Example:**
+```typescript
+// Fetch detailed fact-check for an article
+const response = await fetch(
+  `${API_URL}/articles/${articleId}/fact-check`
+);
+
+if (response.ok) {
+  const factCheck = await response.json();
+  
+  // Display evidence
+  console.log(`Verdict: ${factCheck.verdict}`);
+  console.log(`Score: ${factCheck.credibility_score}/100`);
+  console.log(`Summary: ${factCheck.summary}`);
+  
+  // Access detailed validation data
+  const { key_evidence, references } = factCheck.validation_results;
+  console.log(`Supporting evidence:`, key_evidence.supporting);
+  console.log(`Sources:`, references.length);
+} else if (response.status === 404) {
+  // Article not yet fact-checked
+  console.log('Fact-check pending...');
+}
+```
+
+---
+
 ## Votes Endpoints
 
 ### Cast Vote on Article

@@ -104,6 +104,15 @@ class Settings(BaseSettings):
     RSS_MAX_CONCURRENT_FETCHES: int = 5
     RSS_USER_AGENT: str = "RSS-News-Aggregator/1.0"
     
+    # Fact-Check API Settings
+    FACT_CHECK_API_URL: str = "https://fact-check-production.up.railway.app"
+    FACT_CHECK_ENABLED: bool = True
+    FACT_CHECK_MODE: str = "summary"  # standard, thorough, or summary
+    FACT_CHECK_POLL_INTERVAL: int = 5  # seconds between status polls
+    FACT_CHECK_MAX_POLL_ATTEMPTS: int = 60  # max polling attempts (5 minutes at 5s intervals)
+    FACT_CHECK_MAX_WAIT: int = 120  # maximum wait time (2 minutes) - DEPRECATED, use MAX_POLL_ATTEMPTS
+    FACT_CHECK_RETRY_ATTEMPTS: int = 3  # max retry attempts on failure
+    
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 100
     RATE_LIMIT_UNAUTHENTICATED: int = 20

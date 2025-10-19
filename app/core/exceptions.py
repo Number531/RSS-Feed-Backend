@@ -130,3 +130,72 @@ class InvalidVoteTypeError(ValidationError):
             detail: Error message for invalid vote type
         """
         super().__init__(detail=detail)
+
+
+# Fact-check related exceptions
+
+class AlreadyFactCheckedError(ConflictError):
+    """
+    Exception raised when attempting to fact-check an already fact-checked article.
+    """
+    
+    def __init__(self, detail: str = "Article has already been fact-checked"):
+        """
+        Initialize already fact-checked error.
+        
+        Args:
+            detail: Error message for duplicate fact-check attempt
+        """
+        super().__init__(detail=detail)
+
+
+class FactCheckAPIError(HTTPException):
+    """
+    Exception raised when the fact-check API returns an error.
+    """
+    
+    def __init__(self, detail: str = "Fact-check API error occurred"):
+        """
+        Initialize fact-check API error.
+        
+        Args:
+            detail: Error message from the API
+        """
+        super().__init__(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=detail
+        )
+
+
+class FactCheckTimeoutError(HTTPException):
+    """
+    Exception raised when fact-check job exceeds timeout limit.
+    """
+    
+    def __init__(self, detail: str = "Fact-check job timed out"):
+        """
+        Initialize fact-check timeout error.
+        
+        Args:
+            detail: Error message for timeout
+        """
+        super().__init__(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=detail
+        )
+
+
+class ArticleNotFoundError(NotFoundError):
+    """
+    Exception raised when an article is not found.
+    """
+    
+    def __init__(self, article_id: str = None):
+        """
+        Initialize article not found error.
+        
+        Args:
+            article_id: The ID of the article that was not found
+        """
+        detail = f"Article with ID '{article_id}' not found" if article_id else "Article not found"
+        super().__init__(detail=detail)

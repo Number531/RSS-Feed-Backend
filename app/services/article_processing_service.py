@@ -3,6 +3,7 @@ Article Processing Service for deduplication, categorization, and storage.
 """
 import logging
 from typing import Dict, Optional
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -12,6 +13,7 @@ from app.models.rss_source import RSSSource
 from app.utils.url_utils import generate_url_hash
 from app.utils.categorization import categorize_article, extract_tags
 from app.utils.content_utils import sanitize_html, clean_description, extract_first_image
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +106,10 @@ class ArticleProcessingService:
             await self.db.refresh(article)
             
             logger.info(f"Created new article: {title[:50]}... (category: {category})")
+            
+            # Trigger fact-check asynchronously
+            self._trigger_fact_check(article.id)
+            
             return article
             
         except IntegrityError as e:
@@ -159,3 +165,26 @@ class ArticleProcessingService:
         from sqlalchemy import func
         result = await self.db.execute(select(func.count(Article.id)))
         return result.scalar() or 0
+    
+    def _trigger_fact_check(self, article_id: UUID):
+        """
+        Trigger asynchronous fact-check for an article.
+        
+        Args:
+            article_id: UUID of article to fact-check
+        """
+        if not settings.FACT_CHECK_ENABLED:
+            logger.debug(f"Fact-check disabled, skipping article {article_id}")
+            return
+        
+        try:
+            # Import here to avoid circular dependency
+            from app.tasks.fact_check_tasks import process_fact_check_job_async
+            
+            # Trigger Celery task
+            process_fact_check_job_async.delay(str(article_id))
+            logger.info(f"Triggered fact-check task for article {article_id}")
+            
+        except Exception as e:
+            # Non-critical error, log and continue
+            logger.error(f"Failed to trigger fact-check for article {article_id}: {e}")

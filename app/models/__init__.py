@@ -10,6 +10,7 @@ from app.models.bookmark import Bookmark
 from app.models.reading_history import ReadingHistory
 from app.models.user_reading_preferences import UserReadingPreferences
 from app.models.notification import Notification, UserNotificationPreference
+from app.models.fact_check import ArticleFactCheck, SourceCredibilityScore
 
 __all__ = [
     "User",
@@ -22,4 +23,6 @@ __all__ = [
     "UserReadingPreferences",
     "Notification",
     "UserNotificationPreference",
+    "ArticleFactCheck",
+    "SourceCredibilityScore",
 ]

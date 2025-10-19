@@ -45,6 +45,11 @@ class Article(Base):
     # Trending algorithm
     trending_score = Column(DECIMAL(10, 4), default=0, nullable=False, index=True)
     
+    # Fact-check cache (denormalized for performance)
+    fact_check_score = Column(Integer, nullable=True, index=True)
+    fact_check_verdict = Column(String(50), nullable=True, index=True)
+    fact_checked_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    
     # Full-text search vector
     search_vector = Column(TSVECTOR, nullable=True)
     
@@ -58,6 +63,7 @@ class Article(Base):
     comments = relationship("Comment", back_populates="article", cascade="all, delete-orphan")
     bookmarks = relationship("Bookmark", back_populates="article", cascade="all, delete-orphan")
     reading_history = relationship("ReadingHistory", back_populates="article", cascade="all, delete-orphan")
+    fact_check = relationship("ArticleFactCheck", back_populates="article", uselist=False, cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Article(title='{self.title[:50]}...', source='{self.rss_source_id}')>"

@@ -44,6 +44,7 @@ class RSSSource(Base):
     
     # Relationships
     articles = relationship("Article", back_populates="rss_source", cascade="all, delete-orphan")
+    credibility_scores = relationship("SourceCredibilityScore", back_populates="rss_source", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<RSSSource(name='{self.name}', source='{self.source_name}', active={self.is_active})>"

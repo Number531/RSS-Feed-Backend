@@ -14,13 +14,14 @@ This document provides a comprehensive reference for all API endpoints available
 2. [Authentication Endpoints](#authentication-endpoints)
 3. [User Management Endpoints](#user-management-endpoints)
 4. [Articles Endpoints](#articles-endpoints)
-5. [Votes Endpoints](#votes-endpoints)
-6. [Comments Endpoints](#comments-endpoints)
-7. [Bookmarks Endpoints](#bookmarks-endpoints)
-8. [Reading History Endpoints](#reading-history-endpoints)
-9. [Notifications Endpoints](#notifications-endpoints)
-10. [Error Handling](#error-handling)
-11. [Rate Limiting](#rate-limiting)
+5. [**Fact-Check System (NEW)**](#fact-check-system-new)
+6. [Votes Endpoints](#votes-endpoints)
+7. [Comments Endpoints](#comments-endpoints)
+8. [Bookmarks Endpoints](#bookmarks-endpoints)
+9. [Reading History Endpoints](#reading-history-endpoints)
+10. [Notifications Endpoints](#notifications-endpoints)
+11. [Error Handling](#error-handling)
+12. [Rate Limiting](#rate-limiting)
 
 ---
 
@@ -330,6 +331,12 @@ GET /api/v1/articles?category=politics&sort_by=hot&page=1&page_size=25
       "vote_count": 50,
       "comment_count": 15,
       "tags": ["politics", "election"],
+      
+      // NEW: Fact-Check Fields (automatically included)
+      "fact_check_score": 87,                        // 0-100 credibility score (null if pending)
+      "fact_check_verdict": "TRUE",                  // TRUE, FALSE, MISLEADING, UNVERIFIED, FALSE - MISINFORMATION, etc. (null if pending)
+      "fact_checked_at": "2025-01-27T10:07:00Z",    // Timestamp when fact-check completed (null if pending)
+      
       "user_vote": 1  // Only if authenticated: 1 (upvote), -1 (downvote), null (no vote)
     }
   ],
@@ -453,12 +460,150 @@ GET /api/v1/articles/550e8400-e29b-41d4-a716-446655440000
   "vote_count": 50,
   "comment_count": 15,
   "tags": ["politics", "election"],
+  
+  // Fact-check fields (automatically included)
+  "fact_check_score": 87,
+  "fact_check_verdict": "TRUE",
+  "fact_checked_at": "2025-01-27T10:07:00Z",
+  
   "user_vote": 1  // Only if authenticated
 }
 ```
 
 **Errors:**
 - `404 Not Found`: Article does not exist
+
+---
+
+## Fact-Check System (NEW)
+
+### Overview
+
+All articles are **automatically fact-checked** using an AI-powered microservice. Fact-check data is included in all article responses with no additional API calls required.
+
+### How It Works
+
+1. **Automatic Processing**: When a new article is created, a fact-check job is automatically triggered
+2. **Background Execution**: Fact-checking happens asynchronously (~60-120 seconds)
+3. **Result Storage**: Results are stored in database and denormalized on article records
+4. **Immediate Availability**: Frontend gets fact-check data automatically in article responses
+
+### Fact-Check Fields
+
+Three fields are added to every article response:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `fact_check_score` | integer \| null | Credibility score 0-100 (null if pending) |
+| `fact_check_verdict` | string \| null | Verdict type (null if pending) |
+| `fact_checked_at` | timestamp \| null | When fact-check completed (null if pending) |
+
+### Credibility Scores
+
+| Score Range | Meaning | UI Treatment |
+|-------------|---------|-------------|
+| **80-100** | High credibility | 🟢 Green badge |
+| **60-79** | Medium credibility | 🟡 Yellow badge |
+| **40-59** | Low credibility | 🟠 Orange warning |
+| **0-39** | Very low/misinformation | 🔴 Red alert |
+| **null** | Pending fact-check | ⚪ Gray "Checking..." |
+
+### Verdict Types
+
+| Verdict | Meaning |
+|---------|-------|
+| `TRUE` | Claims verified as accurate |
+| `MOSTLY_TRUE` | Mostly accurate with minor issues |
+| `PARTIALLY_TRUE` | Mix of true and false claims |
+| `MISLEADING` | Technically true but misleading context |
+| `FALSE` | Claims are incorrect |
+| `FALSE - MISINFORMATION` | Deliberately false, designed to deceive ⚠️ |
+| `UNVERIFIED` | Cannot verify claims |
+| `PENDING` | Fact-check in progress |
+| `ERROR` | Fact-check failed |
+
+### Frontend Integration Examples
+
+**Display Credibility Badge:**
+```typescript
+function CredibilityBadge({ article }) {
+  if (article.fact_check_score === null) {
+    return <Badge color="gray">⏳ Checking...</Badge>;
+  }
+  
+  const getColor = (score) => {
+    if (score >= 80) return 'green';
+    if (score >= 60) return 'yellow';
+    if (score >= 40) return 'orange';
+    return 'red';
+  };
+  
+  return (
+    <Badge color={getColor(article.fact_check_score)}>
+      {article.fact_check_score}/100 • {article.fact_check_verdict}
+    </Badge>
+  );
+}
+```
+
+**Filter by Credibility:**
+```typescript
+// High credibility articles only
+const trustworthy = articles.filter(a => a.fact_check_score >= 80);
+
+// Misinformation detection
+const misinformation = articles.filter(a => 
+  a.fact_check_verdict?.includes('MISINFORMATION')
+);
+
+// Pending fact-checks
+const pending = articles.filter(a => a.fact_check_score === null);
+```
+
+**Show Misinformation Warning:**
+```typescript
+{article.fact_check_score < 40 && (
+  <Alert severity="error">
+    ⚠️ {article.fact_check_verdict}
+    <Link href="#">View Fact-Check Report</Link>
+  </Alert>
+)}
+```
+
+### Get Detailed Fact-Check Report (Optional)
+
+For full fact-check details (evidence, sources, references), call the external fact-check API:
+
+**External API**: `https://fact-check-production.up.railway.app`
+
+**Get Full Report:**
+```
+GET https://fact-check-production.up.railway.app/fact-check/{job_id}/result
+```
+
+Returns:
+- Complete validation results
+- Supporting/contradicting evidence
+- 25+ source references
+- Misinformation indicators
+- Source consensus analysis
+- AI confidence levels
+
+**Note**: `job_id` can be queried from your backend's `article_fact_checks` table if needed for detailed reports.
+
+### Best Practices
+
+✅ **Always check for null** - Articles may not be fact-checked yet  
+✅ **Show pending state** - Display "⏳ Checking..." for null scores  
+✅ **Highlight misinformation** - Use strong visual warnings for scores < 40  
+✅ **Progressive disclosure** - Show score on cards, full report on click  
+✅ **Trust signals** - Display "Verified against X sources" when available  
+
+### Additional Resources
+
+📚 **Complete Integration Guide**: `FRONTEND_FACT_CHECK_INTEGRATION_GUIDE.md`  
+📖 **Quick Start**: `FRONTEND_FACT_CHECK_QUICKSTART.md`  
+🔗 **External API Docs**: `https://fact-check-production.up.railway.app/docs`
 
 ---
 

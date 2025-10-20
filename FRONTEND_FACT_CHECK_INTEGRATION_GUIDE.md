@@ -202,6 +202,101 @@ const lowCredibility = articles.filter(a => a.fact_check_score < 50);
 const pending = articles.filter(a => !a.fact_checked_at);
 ```
 
+#### 4. Get Fact-Check Details (NEW)
+
+**GET** `/api/v1/articles/{article_id}/fact-check`
+
+Retrieve complete fact-check information for a specific article including evidence, sources, and validation results.
+
+**Authentication:** Not required
+
+**Path Parameters:**
+- `article_id` - UUID of the article
+
+**Response:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "article_id": "650e8400-e29b-41d4-a716-446655440001",
+  "job_id": "9aa51885-c336-4de0-aa17-88a1944379c7",
+  "verdict": "TRUE",
+  "credibility_score": 87,
+  "confidence": 0.9,
+  "summary": "The UK did announce its decision to cede sovereignty of the Chagos Islands to Mauritius on 3 October 2024...",
+  "claims_analyzed": 1,
+  "claims_validated": 1,
+  "claims_true": 1,
+  "claims_false": 0,
+  "claims_misleading": 0,
+  "claims_unverified": 0,
+  "validation_results": {
+    "claim": "The UK announced on 3 October 2024...",
+    "verdict": "TRUE",
+    "confidence": 0.9,
+    "key_evidence": {
+      "supporting": [
+        "Official UK government announcement on 3 October 2024",
+        "Confirmed by multiple news agencies"
+      ],
+      "contradicting": [],
+      "context": ["Historic sovereignty dispute since 1960s"]
+    },
+    "references": [
+      {
+        "citation_id": 1,
+        "title": "UK announces historic sovereignty agreement",
+        "url": "https://example.com/source1",
+        "source": "AP News",
+        "credibility": "HIGH"
+      }
+    ]
+  },
+  "num_sources": 25,
+  "source_consensus": "STRONG_AGREEMENT",
+  "validation_mode": "summary",
+  "processing_time_seconds": 137,
+  "api_costs": {"total": 0.008},
+  "fact_checked_at": "2025-10-19T14:22:54Z",
+  "created_at": "2025-10-19T14:22:55Z",
+  "updated_at": "2025-10-19T14:22:55Z"
+}
+```
+
+**Key Response Fields:**
+- `verdict` - Primary verdict (TRUE, FALSE, MISLEADING, etc.)
+- `credibility_score` - 0-100 credibility rating
+- `confidence` - AI confidence level (0.0-1.0)
+- `summary` - Brief summary of findings
+- `claims_*` - Detailed claim statistics
+- `validation_results` - Complete validation data with evidence and references
+- `num_sources` - Number of sources consulted
+- `source_consensus` - Source agreement level
+
+**Error Responses:**
+- `404 Not Found` - No fact-check exists for this article (may still be processing)
+- `422 Unprocessable Entity` - Invalid article_id format
+
+**Usage Example:**
+```typescript
+// Fetch detailed fact-check
+const fetchFactCheck = async (articleId: string) => {
+  try {
+    const response = await fetch(`/api/v1/articles/${articleId}/fact-check`);
+    
+    if (response.ok) {
+      const factCheck = await response.json();
+      return factCheck;
+    } else if (response.status === 404) {
+      // Article not yet fact-checked
+      return null;
+    }
+  } catch (error) {
+    console.error('Failed to fetch fact-check:', error);
+    return null;
+  }
+};
+```
+
 ---
 
 ## External Fact-Check API
@@ -563,6 +658,58 @@ export interface Article {
   user_vote: number | null;  // -1, 0, 1
 }
 
+// Fact-check details from backend endpoint (NEW)
+export interface FactCheckDetail {
+  id: string;
+  article_id: string;
+  job_id: string;
+  verdict: Verdict;
+  credibility_score: number;           // 0-100
+  confidence: number | null;           // 0.0-1.0
+  summary: string;
+  
+  // Claim statistics
+  claims_analyzed: number | null;
+  claims_validated: number | null;
+  claims_true: number | null;
+  claims_false: number | null;
+  claims_misleading: number | null;
+  claims_unverified: number | null;
+  
+  // Complete validation data
+  validation_results: {
+    claim: string;
+    verdict: Verdict;
+    confidence: number;
+    key_evidence: {
+      supporting: string[];
+      contradicting: string[];
+      context: string[];
+    };
+    references: Array<{
+      citation_id: number;
+      title: string;
+      url: string;
+      source: string;
+      credibility: 'HIGH' | 'MEDIUM' | 'LOW';
+    }>;
+  };
+  
+  // Evidence quality
+  num_sources: number | null;
+  source_consensus: SourceConsensus | null;
+  
+  // Processing metadata
+  validation_mode: string | null;
+  processing_time_seconds: number | null;
+  api_costs: Record<string, any> | null;
+  
+  // Timestamps
+  fact_checked_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Full fact-check details (from Railway API or database)
 export interface FactCheckResult {
   job_id: string;
@@ -779,39 +926,55 @@ export function useFactCheckFilters(articles: Article[]) {
 }
 ```
 
-### 3. Fetch Fact-Check Details
+### 3. Fetch Fact-Check Details from Backend (Recommended)
 
 ```typescript
 // services/factCheckApi.ts
 
-const RAILWAY_API = 'https://fact-check-production.up.railway.app';
+import { FactCheckDetail } from '@/types/factcheck';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export class FactCheckAPI {
-  async getJobStatus(jobId: string) {
-    const response = await fetch(`${RAILWAY_API}/fact-check/${jobId}/status`);
-    if (!response.ok) throw new Error('Failed to fetch status');
-    return response.json();
+  /**
+   * Get fact-check details from your backend (RECOMMENDED)
+   * Faster and cached - use this for most cases
+   */
+  async getFactCheckFromBackend(articleId: string): Promise<FactCheckDetail | null> {
+    try {
+      const response = await fetch(`${API_URL}/api/v1/articles/${articleId}/fact-check`);
+      
+      if (response.status === 404) {
+        // Article not yet fact-checked
+        return null;
+      }
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch fact-check');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching fact-check:', error);
+      return null;
+    }
   }
   
+  /**
+   * Get fact-check details from Railway API (ALTERNATIVE)
+   * Use only if you need real-time status or the backend doesn't have it yet
+   */
   async getJobResult(jobId: string): Promise<FactCheckResult> {
+    const RAILWAY_API = 'https://fact-check-production.up.railway.app';
     const response = await fetch(`${RAILWAY_API}/fact-check/${jobId}/result`);
     if (!response.ok) throw new Error('Failed to fetch result');
     return response.json();
   }
   
-  async submitFactCheck(url: string): Promise<{ job_id: string }> {
-    const response = await fetch(`${RAILWAY_API}/fact-check/submit`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url,
-        mode: 'summary',
-        generate_image: false,
-        generate_article: true
-      })
-    });
-    
-    if (!response.ok) throw new Error('Failed to submit');
+  async getJobStatus(jobId: string) {
+    const RAILWAY_API = 'https://fact-check-production.up.railway.app';
+    const response = await fetch(`${RAILWAY_API}/fact-check/${jobId}/status`);
+    if (!response.ok) throw new Error('Failed to fetch status');
     return response.json();
   }
 }
@@ -822,15 +985,31 @@ export class FactCheckAPI {
 ```typescript
 // components/FactCheckModal.tsx
 
-import { FactCheckResult } from '@/types/factcheck';
+import { useState, useEffect } from 'react';
+import { FactCheckDetail } from '@/types/factcheck';
+import { FactCheckAPI } from '@/services/factCheckApi';
 
 interface FactCheckModalProps {
-  result: FactCheckResult;
+  articleId: string;
   onClose: () => void;
 }
 
-export function FactCheckModal({ result, onClose }: FactCheckModalProps) {
-  const validation = result.validation_results[0];
+export function FactCheckModal({ articleId, onClose }: FactCheckModalProps) {
+  const [factCheck, setFactCheck] = useState<FactCheckDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      const api = new FactCheckAPI();
+      const data = await api.getFactCheckFromBackend(articleId);
+      setFactCheck(data);
+      setLoading(false);
+    };
+    fetchData();
+  }, [articleId]);
+  
+  if (loading) return <div>Loading fact-check...</div>;
+  if (!factCheck) return <div>No fact-check available</div>;
   
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -839,40 +1018,70 @@ export function FactCheckModal({ result, onClose }: FactCheckModalProps) {
         
         {/* Verdict */}
         <div className="verdict-section">
-          <span className={`verdict-badge ${validation.verdict.toLowerCase()}`}>
-            {validation.verdict}
+          <span className={`verdict-badge ${factCheck.verdict.toLowerCase()}`}>
+            {factCheck.verdict}
           </span>
-          <span className="confidence">
-            Confidence: {(validation.confidence * 100).toFixed(0)}%
-          </span>
+          <div className="credibility-score">
+            {factCheck.credibility_score}/100
+          </div>
+          {factCheck.confidence && (
+            <span className="confidence">
+              Confidence: {(factCheck.confidence * 100).toFixed(0)}%
+            </span>
+          )}
         </div>
         
         {/* Summary */}
         <div className="summary">
           <h3>Summary</h3>
-          <p>{validation.summary}</p>
+          <p>{factCheck.summary}</p>
         </div>
+        
+        {/* Claim Statistics */}
+        {factCheck.claims_analyzed && (
+          <div className="claim-stats">
+            <h3>Claims Analysis</h3>
+            <div className="stats-grid">
+              <div>Analyzed: {factCheck.claims_analyzed}</div>
+              <div>True: {factCheck.claims_true || 0}</div>
+              <div>False: {factCheck.claims_false || 0}</div>
+              <div>Misleading: {factCheck.claims_misleading || 0}</div>
+            </div>
+          </div>
+        )}
         
         {/* Evidence */}
         <div className="evidence">
           <h3>Supporting Evidence</h3>
           <ul>
-            {validation.validation_output.key_evidence.supporting.map((evidence, i) => (
+            {factCheck.validation_results.key_evidence.supporting.map((evidence, i) => (
               <li key={i}>{evidence}</li>
             ))}
           </ul>
+          
+          {factCheck.validation_results.key_evidence.contradicting.length > 0 && (
+            <>
+              <h3>Contradicting Evidence</h3>
+              <ul>
+                {factCheck.validation_results.key_evidence.contradicting.map((evidence, i) => (
+                  <li key={i}>{evidence}</li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
         
         {/* Sources */}
         <div className="sources">
-          <h3>Sources Consulted ({validation.num_sources})</h3>
-          <div className="source-metrics">
-            <span>Consensus: {validation.validation_output.source_analysis.source_consensus}</span>
-            <span>Quality: {validation.validation_output.source_analysis.evidence_quality}</span>
-          </div>
+          <h3>Sources Consulted ({factCheck.num_sources || 'Multiple'})</h3>
+          {factCheck.source_consensus && (
+            <div className="source-metrics">
+              <span>Consensus: {factCheck.source_consensus}</span>
+            </div>
+          )}
           
           <ul className="references">
-            {validation.validation_output.references.slice(0, 5).map(ref => (
+            {factCheck.validation_results.references.slice(0, 5).map(ref => (
               <li key={ref.citation_id}>
                 <a href={ref.url} target="_blank" rel="noopener noreferrer">
                   [{ref.citation_id}] {ref.title}
@@ -884,6 +1093,16 @@ export function FactCheckModal({ result, onClose }: FactCheckModalProps) {
             ))}
           </ul>
         </div>
+        
+        {/* Processing Info */}
+        {factCheck.processing_time_seconds && (
+          <div className="processing-info">
+            <small>
+              Processed in {factCheck.processing_time_seconds}s • 
+              Mode: {factCheck.validation_mode || 'standard'}
+            </small>
+          </div>
+        )}
         
         <button onClick={onClose}>Close</button>
       </div>
@@ -996,10 +1215,12 @@ export function FactCheckStatus({ jobId }: { jobId: string }) {
 
 ### Performance Optimization
 
-1. **Use Denormalized Fields** - Query `fact_check_score` directly from articles table
-2. **Index Filters** - Backend has indexes on score, verdict, and timestamp
-3. **Cache Results** - Fact-check results rarely change, cache aggressively
-4. **Lazy Load Details** - Only fetch full fact-check data when user clicks "View Details"
+1. **Use Backend Endpoint** - Use `/api/v1/articles/{article_id}/fact-check` for detailed data (cached and fast)
+2. **Use Denormalized Fields** - Query `fact_check_score` directly from articles table for list views
+3. **Index Filters** - Backend has indexes on score, verdict, and timestamp
+4. **Cache Results** - Fact-check results rarely change, cache aggressively in your app
+5. **Lazy Load Details** - Only fetch full fact-check data when user clicks "View Details"
+6. **Railway API Alternative** - Only use Railway API directly if you need real-time job status
 
 ### User Experience
 
@@ -1057,13 +1278,14 @@ function getCredibilityDisplay(article: Article) {
 
 ### Quick Integration Checklist
 
-✅ **Backend API** - Use `/api/v1/articles` endpoints for cached data  
-✅ **Denormalized Fields** - `fact_check_score`, `fact_check_verdict`, `fact_checked_at`  
-✅ **Railway API** - Use for real-time status and full detailed reports  
-✅ **TypeScript Types** - Import interfaces for type safety  
+✅ **Backend API** - Use `/api/v1/articles` endpoints for article lists with fact-check scores  
+✅ **Fact-Check Endpoint** - Use `/api/v1/articles/{id}/fact-check` for detailed reports (NEW)  
+✅ **Denormalized Fields** - `fact_check_score`, `fact_check_verdict`, `fact_checked_at` on articles  
+✅ **Railway API** - Optional, only for real-time job status tracking  
+✅ **TypeScript Types** - Use `FactCheckDetail` interface for backend endpoint responses  
 ✅ **UI Components** - Badge, modal, filters, status indicator  
-✅ **Error Handling** - Handle pending, error, and null states  
-✅ **Performance** - Cache results, lazy load details, use indexed queries  
+✅ **Error Handling** - Handle pending, error, and null states gracefully  
+✅ **Performance** - Use backend endpoint (cached), lazy load details, cache in your app
 
 ### Key Metrics to Display
 

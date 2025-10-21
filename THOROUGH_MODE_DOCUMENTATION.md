@@ -1,19 +1,252 @@
-# Thorough Mode: Complete Documentation
+# Fact-Check System: Complete Documentation
 
 ## Overview
 
-Thorough mode is the fact-checking system's comprehensive validation mode that performs extensive temporal analysis and multi-channel evidence gathering for each high-risk claim. This document explains the complete architecture, data flow, and temporal features.
+The fact-checking system offers two validation modes: **Summary Mode** (fast, article-level) and **Thorough Mode** (comprehensive, claim-by-claim). This document explains both modes, their architectures, data flows, and when to use each.
 
 ---
 
 ## Table of Contents
 
-1. [Temporal Analysis Features](#temporal-analysis-features)
-2. [Evidence Collection Architecture](#evidence-collection-architecture)
-3. [Complete Data Flow Per Claim](#complete-data-flow-per-claim)
-4. [Validation Prompt Structure](#validation-prompt-structure)
-5. [Output Schema](#output-schema)
-6. [Configuration](#configuration)
+1. [Mode Comparison](#mode-comparison)
+2. [Summary Mode](#summary-mode)
+3. [Thorough Mode](#thorough-mode)
+4. [Temporal Analysis Features](#temporal-analysis-features)
+5. [Evidence Collection Architecture](#evidence-collection-architecture)
+6. [Complete Data Flow](#complete-data-flow)
+7. [Validation Prompt Structures](#validation-prompt-structures)
+8. [Output Schemas](#output-schemas)
+9. [Configuration](#configuration)
+10. [Cost & Performance](#cost--performance)
+
+---
+
+## Mode Comparison
+
+### Quick Reference
+
+| Feature | Summary Mode | Thorough Mode |
+|---------|--------------|---------------|
+| **Analysis Level** | Article-level (overall narrative) | Claim-by-claim (granular) |
+| **Sources Per Article** | ~25 sources total | ~25 sources × number of claims |
+| **Claims Extracted** | 1-2 high-level statements | Average 22.6 claims per article |
+| **Processing Time** | ~3-4 minutes | ~4-5 minutes |
+| **Cost Per Article** | ~$0.04 | ~$0.37 (10 claims) |
+| **Parallel Searches** | 4 queries for entire article | 4 queries per claim |
+| **Use Case** | Quick screening, high-volume | Detailed investigation |
+| **Verdict Granularity** | Single verdict for article | Individual verdicts per claim |
+
+### When to Use Each Mode
+
+**Summary Mode** is best for:
+- ✅ High-volume article processing
+- ✅ Initial triage and filtering
+- ✅ Real-time feed monitoring
+- ✅ Cost-sensitive deployments
+- ✅ Quick misinformation detection
+
+**Thorough Mode** is best for:
+- ✅ Controversial or disputed claims
+- ✅ Legal/medical/financial content
+- ✅ Detailed investigative reporting
+- ✅ Claims requiring historical context
+- ✅ Content with multiple complex assertions
+
+---
+
+## Summary Mode
+
+### How Summary Mode Works
+
+**Summary mode validates the overall narrative of an article**, treating it as a cohesive story rather than individual claims.
+
+#### Process Flow
+
+```
+1. Article Text Input
+   ↓
+2. Extract 1-2 High-Level Claims
+   ↓
+3. Single Evidence Search (4 parallel queries)
+   → News: 5 results
+   → Research: 10 results  
+   → General: 5 results
+   → Historical: 5 results
+   = 25 total sources
+   ↓
+4. AI Validation (article-level analysis)
+   ↓
+5. Single Verdict + Score
+```
+
+#### Key Characteristics
+
+**Claim Extraction**: Summary mode extracts 1-2 overarching statements that represent the article's main narrative.
+
+```json
+{
+  "article_title": "Federal Reserve Announces Rate Increase",
+  "extracted_claims": [
+    "The Federal Reserve raised interest rates to combat inflation in 2024"
+  ],
+  "claim_count": 1
+}
+```
+
+**Evidence Collection**: One set of 25 sources is gathered for the entire article:
+- All claims share the same evidence pool
+- 4 parallel searches executed once
+- Cost-efficient for quick validation
+
+**Validation**: The AI model analyzes the overall narrative:
+- Evaluates article's general accuracy
+- Checks for major factual errors
+- Provides single credibility score
+- Returns one verdict: TRUE, FALSE, MISLEADING, or UNVERIFIED
+
+#### Summary Mode Output Example
+
+```json
+{
+  "verdict": "TRUE",
+  "credibility_score": 90,
+  "summary": "Article accurately reports Federal Reserve's 2024 rate increases to combat inflation [1][2][3]",
+  "claims_analyzed": 1,
+  "claims_true": 1,
+  "claims_false": 0,
+  "claims_misleading": 0,
+  "num_sources": 25,
+  "processing_time_ms": 3400,
+  "cost_usd": 0.04
+}
+```
+
+#### Summary Mode Advantages
+
+✅ **Fast**: 3-4 minutes per article  
+✅ **Economical**: ~$0.04 per article  
+✅ **Efficient**: Good for filtering large volumes  
+✅ **Clear**: Single verdict easy to understand  
+
+#### Summary Mode Limitations
+
+⚠️ **Less Granular**: Can't identify specific false claims in otherwise accurate article  
+⚠️ **May Miss Details**: Won't catch subtle misrepresentations  
+⚠️ **Limited Context**: Single evidence pool for all claims  
+
+---
+
+## Thorough Mode
+
+### How Thorough Mode Works
+
+**Thorough mode extracts individual claims and validates each one independently** with dedicated evidence searches.
+
+#### Process Flow
+
+```
+1. Article Text Input
+   ↓
+2. Extract Individual Claims (avg 22.6 per article)
+   ↓
+3. FOR EACH CLAIM:
+   ├─ Evidence Search (4 parallel queries)
+   │  → News: 5 results
+   │  → Research: 10 results
+   │  → General: 5 results
+   │  → Historical: 5 results
+   │  = 25 sources PER CLAIM
+   │  ↓
+   ├─ AI Validation (claim-specific)
+   │  ↓
+   └─ Individual Verdict + Score
+   ↓
+4. Aggregate Results
+   ↓
+5. Overall Article Verdict
+```
+
+#### Key Characteristics
+
+**Claim Extraction**: Thorough mode extracts 20-40+ discrete factual statements.
+
+```json
+{
+  "article_title": "Federal Reserve Announces Rate Increase",
+  "extracted_claims": [
+    "The Federal Reserve raised rates to 5.5% in December 2024",
+    "This marked the sixth consecutive rate increase",
+    "Inflation was at 3.4% annually",
+    "The Fed cited inflation concerns as justification",
+    "Previous rate increases occurred monthly since June 2024",
+    // ... 15-35 more claims
+  ],
+  "claim_count": 22
+}
+```
+
+**Evidence Collection**: Each claim gets its own evidence search:
+- **Claim 1**: 25 sources (news + research + general + historical)
+- **Claim 2**: 25 sources (fresh search, different evidence)
+- **Claim 3**: 25 sources (fresh search)
+- **...and so on**
+
+**Total for 6-claim article**: 6 × 25 = **150 source lookups**
+
+**Validation**: Each claim is independently validated:
+- Dedicated evidence for each assertion
+- Individual verdict per claim
+- Granular accuracy tracking
+- Aggregated into overall score
+
+#### Thorough Mode Output Example
+
+```json
+{
+  "verdict": "TRUE",
+  "credibility_score": 95,
+  "summary": "Article is highly accurate with 5 true claims verified through comprehensive evidence",
+  "claims_analyzed": 6,
+  "claims_true": 5,
+  "claims_false": 1,
+  "claims_misleading": 0,
+  "claims_unverified": 0,
+  "num_sources": 150,  // 6 claims × 25 sources
+  "claim_breakdown": [
+    {
+      "claim": "The Federal Reserve raised rates to 5.5%",
+      "verdict": "TRUE",
+      "confidence": 98,
+      "sources_used": 25
+    },
+    {
+      "claim": "This marked the sixth consecutive increase",
+      "verdict": "FALSE",
+      "confidence": 92,
+      "sources_used": 25
+    },
+    // ... 4 more claims
+  ],
+  "processing_time_ms": 8420,
+  "cost_usd": 0.22
+}
+```
+
+#### Thorough Mode Advantages
+
+✅ **Granular**: Identifies exactly which claims are true/false  
+✅ **Comprehensive**: 25 sources per claim = thorough validation  
+✅ **Detailed**: Full breakdown of article accuracy  
+✅ **Temporal**: Historical context for each claim  
+✅ **Transparent**: Can see which specific claims failed  
+
+#### Thorough Mode Limitations
+
+⚠️ **Expensive**: ~$0.037 per claim (~$0.37 for 10 claims)  
+⚠️ **Slower**: 4-5 minutes per article  
+⚠️ **Complex**: More data to process and display  
+
+---
 
 ---
 
@@ -246,11 +479,43 @@ date_range = "Unlimited"  # Critical for finding decades-old precedents
 
 ---
 
-## Complete Data Flow Per Claim
+## Complete Data Flow
 
-### Step-by-Step Evidence Collection
+### Summary Mode Data Flow
 
-For **each high-risk claim**, here's the complete data flow:
+#### Single Evidence Collection for Article
+
+```json
+{
+  "article": "Federal Reserve Announces Rate Increase",
+  "mode": "summary",
+  "claims_extracted": 1,
+  
+  "evidence_search": {
+    "total_searches": 4,
+    "total_results": 25,
+    "search_types": ["news", "research", "general", "historical"]
+  },
+  
+  "validation": {
+    "verdict": "TRUE",
+    "score": 90,
+    "sources_used": 25
+  },
+  
+  "cost": {
+    "exa_searches": "$0.010",
+    "gemini": "$0.027",
+    "total": "$0.037"
+  }
+}
+```
+
+### Thorough Mode Data Flow
+
+#### Step-by-Step Evidence Collection Per Claim
+
+For **each individual claim**, here's the complete data flow:
 
 #### Step 1: Claim Extraction
 ```json

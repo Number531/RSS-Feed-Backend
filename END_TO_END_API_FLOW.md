@@ -523,6 +523,10 @@ The API returns a comprehensive JSON object with THREE main sections:
 
 ### 6.1: Clean Report Section
 
+The clean report contains the **analysis for each high-risk claim**, showing why it's correct or incorrect through evidence synthesis.
+
+#### Overview Structure
+
 ```json
 {
   "report": {
@@ -547,23 +551,346 @@ The API returns a comprehensive JSON object with THREE main sections:
     },
     
     "validation_results": [
-      {
-        "claim": "The Federal Reserve raised interest rates to 5.5% in December 2024",
-        "verdict": "TRUE",
-        "confidence": 95,
-        "risk_level": "HIGH",
-        "category": "Economic Policy",
-        "summary": "The claim is accurate...",
-        "key_findings": [...],
-        "temporal_analysis": {...},
-        "sources": [...]  // Top 8-10 cited sources only
-        // NO raw_evidence_corpus here (separated out)
-      }
-      // ... 9 more validation results
+      // Array of detailed claim analyses (see examples below)
     ]
   }
 }
 ```
+
+---
+
+#### Example 1: TRUE Verdict - Complete Analysis
+
+This shows how the system explains WHY a claim is correct:
+
+```json
+{
+  "claim": "The Federal Reserve raised interest rates to 5.5% in December 2024",
+  "verdict": "TRUE",
+  "confidence": 95,
+  "risk_level": "HIGH",
+  "category": "Economic Policy",
+  
+  "summary": "The claim is accurate. The Federal Reserve raised interest rates to 5.5% in December 2024 in response to persistent inflation, marking the sixth consecutive rate increase [1][2][3].",
+  
+  "key_findings": [
+    "The Fed raised rates to 5.5% on December 15, 2024, citing inflation concerns [1]",
+    "This marked the sixth consecutive rate increase aimed at inflation control [2]",
+    "Recent inflation data showed 3.4% annual rate, justifying continued tightening [3]",
+    "Historical precedent from the 1980s Volcker era demonstrates effectiveness of aggressive rate increases [5]",
+    "Multiple credible news sources and official Fed statements confirm this policy decision [1][2][4]"
+  ],
+  
+  "temporal_analysis": {
+    "claim_timeframe": "December 2024",
+    "evidence_currency": "Highly current - latest source from 2024-12-15, just 5 weeks ago",
+    "historical_context": "Consistent with past Fed responses to inflation, particularly the 1980s Volcker era when rates reached 20%. Current increases are more moderate but follow similar policy logic.",
+    "temporal_verdict": "The claim's validity is strongly supported by both recent evidence and historical patterns. No contradictory information has emerged since the claim's timeframe."
+  },
+  
+  "contradictions": [],
+  
+  "sources": [
+    {
+      "id": 1,
+      "title": "Fed Raises Rates to 5.5% Amid Inflation Concerns",
+      "url": "https://reuters.com/business/fed-rates-2024-12",
+      "source": "Reuters",
+      "author": "Howard Schneider",
+      "date": "2024-12-15",
+      "type": "news",
+      "relevance": "Primary evidence of the December 2024 rate increase announcement",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 2,
+      "title": "Federal Reserve's 2024 Monetary Policy Decisions",
+      "url": "https://federalreserve.gov/newsevents/pressreleases/monetary20241215a.htm",
+      "source": "Federal Reserve",
+      "date": "2024-12-15",
+      "type": "general",
+      "relevance": "Official Fed statement confirming rate increase policy",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 3,
+      "title": "Inflation Data Shows Persistent Price Pressures",
+      "url": "https://bls.gov/news.release/cpi.nr0.htm",
+      "source": "Bureau of Labor Statistics",
+      "date": "2024-12-12",
+      "type": "general",
+      "relevance": "Official inflation data justifying Fed's policy decisions",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 4,
+      "title": "Understanding the Fed's 2024 Rate Decisions",
+      "url": "https://brookings.edu/fed-policy-2024",
+      "source": "Brookings Institution",
+      "date": "2024-12-16",
+      "type": "general",
+      "relevance": "Expert analysis confirming policy rationale",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 5,
+      "title": "The Volcker Era: Fighting Inflation in the 1980s",
+      "url": "https://federalreservehistory.org/essays/volcker-disinflation",
+      "source": "Federal Reserve History",
+      "date": "1985-03-12",
+      "type": "historical",
+      "relevance": "Historical precedent showing aggressive rate increases successfully controlled inflation",
+      "credibility": "HIGH"
+    }
+  ],
+  
+  "processing_metadata": {
+    "processing_time_ms": 8420,
+    "token_usage": {
+      "input_tokens": 12500,
+      "output_tokens": 850,
+      "total_cost_usd": 0.0342
+    }
+  }
+}
+```
+
+---
+
+#### Example 2: FALSE Verdict - Complete Analysis
+
+This shows how the system explains WHY a claim is incorrect:
+
+```json
+{
+  "claim": "The unemployment rate reached 15% in 2024",
+  "verdict": "FALSE",
+  "confidence": 98,
+  "risk_level": "HIGH",
+  "category": "Economic Policy",
+  
+  "summary": "This claim is false. Official Bureau of Labor Statistics data shows the unemployment rate remained between 3.7% and 4.1% throughout 2024, never approaching 15% [1][2].",
+  
+  "key_findings": [
+    "BLS monthly employment reports consistently show unemployment between 3.7-4.1% throughout 2024 [1]",
+    "The 15% figure has no basis in official government data or credible economic sources [2]",
+    "Multiple independent fact-checking organizations have debunked this claim [3][4]",
+    "The last time US unemployment reached 15% was during the Great Depression in the 1930s [5]",
+    "Current unemployment rates are near historic lows, not highs [1][6]"
+  ],
+  
+  "temporal_analysis": {
+    "claim_timeframe": "Throughout 2024",
+    "evidence_currency": "Highly current - BLS monthly reports through December 2024, published within days of claim",
+    "historical_context": "Current unemployment rates (3.7-4.1%) are near historic lows. The 15% unemployment rate hasn't occurred in the US since the 1940s during World War II demobilization. Even during the 2008 financial crisis, unemployment peaked at 10%.",
+    "temporal_verdict": "The claim is demonstrably false based on contemporaneous official government data. No credible economic source supports this figure. The claim appears to fabricate or severely misrepresent employment statistics."
+  },
+  
+  "contradictions": [],
+  
+  "sources": [
+    {
+      "id": 1,
+      "title": "Employment Situation Summary - December 2024",
+      "url": "https://bls.gov/news.release/empsit.nr0.htm",
+      "source": "Bureau of Labor Statistics",
+      "date": "2024-12-06",
+      "type": "general",
+      "relevance": "Official government employment data showing actual unemployment rate of 3.9%",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 2,
+      "title": "2024 Employment Data: Year in Review",
+      "url": "https://bls.gov/opub/mlr/2024/article/employment-review.htm",
+      "source": "Bureau of Labor Statistics",
+      "date": "2024-12-20",
+      "type": "general",
+      "relevance": "Comprehensive annual review confirming unemployment rates throughout 2024",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 3,
+      "title": "Fact Check: False Claim About 15% Unemployment",
+      "url": "https://factcheck.org/2024/11/unemployment-claim-false/",
+      "source": "FactCheck.org",
+      "date": "2024-11-22",
+      "type": "general",
+      "relevance": "Independent fact-check debunking the 15% claim",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 4,
+      "title": "Debunking Viral Unemployment Misinformation",
+      "url": "https://politifact.com/factchecks/2024/dec/unemployment-rate-false/",
+      "source": "PolitiFact",
+      "date": "2024-12-01",
+      "type": "general",
+      "relevance": "Additional independent verification that claim is false",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 5,
+      "title": "Historical Unemployment Rates in the United States",
+      "url": "https://bls.gov/opub/mlr/2016/article/historical-unemployment.htm",
+      "source": "Bureau of Labor Statistics",
+      "date": "2016-06-15",
+      "type": "historical",
+      "relevance": "Historical data showing 15% unemployment last occurred in 1940s",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 6,
+      "title": "US Labor Market Remains Strong in 2024",
+      "url": "https://brookings.edu/articles/labor-market-2024-analysis/",
+      "source": "Brookings Institution",
+      "author": "Janet Smith",
+      "date": "2024-11-18",
+      "type": "general",
+      "relevance": "Expert analysis confirming low unemployment rates",
+      "credibility": "HIGH"
+    }
+  ],
+  
+  "processing_metadata": {
+    "processing_time_ms": 7850,
+    "token_usage": {
+      "input_tokens": 11200,
+      "output_tokens": 920,
+      "total_cost_usd": 0.0315
+    }
+  }
+}
+```
+
+---
+
+#### Example 3: MISLEADING Verdict - Complete Analysis
+
+This shows how the system explains WHY a claim is misleading (contains truth but omits critical context):
+
+```json
+{
+  "claim": "Crime rates are at an all-time high",
+  "verdict": "MISLEADING",
+  "confidence": 87,
+  "risk_level": "HIGH",
+  "category": "Public Safety",
+  
+  "summary": "This claim is misleading. While certain crime categories increased in specific cities, overall national crime rates remain near historic lows according to FBI data [1][2]. The claim cherry-picks data and omits crucial context about long-term trends.",
+  
+  "key_findings": [
+    "FBI data shows violent crime decreased 3% nationally in 2024 compared to 2023 [1]",
+    "Property crime also decreased 2.4% in the same period [1]",
+    "Current crime rates are 40-50% lower than the peaks of the early 1990s [2][5]",
+    "However, some cities did experience increases in specific categories like retail theft and auto theft [3]",
+    "The claim selectively focuses on isolated increases while ignoring broader national downward trends [4]",
+    "Major news coverage has disproportionately highlighted local crime spikes without national context [6]"
+  ],
+  
+  "temporal_analysis": {
+    "claim_timeframe": "Present day (2024)",
+    "evidence_currency": "Very recent - FBI preliminary data from Q3 2024 released December 2024",
+    "historical_context": "Crime peaked in the early 1990s with violent crime rates nearly double current levels. After steady declines through the 2000s and 2010s, rates briefly increased during 2020-2021 pandemic disruptions but have since resumed declining. Current rates are near 50-year lows, not highs.",
+    "temporal_verdict": "The claim is misleading because it suggests unprecedented crime levels when the opposite is true historically. While recent years saw some localized increases, the long-term trend shows dramatic decreases. The claim conflates perception with reality."
+  },
+  
+  "contradictions": [
+    "Claim states 'all-time high' but FBI comprehensive data shows rates near historic lows",
+    "National statistics directly contradict the blanket assertion about overall crime levels",
+    "Historical comparison reveals current rates are 40-50% below 1990s peaks"
+  ],
+  
+  "sources": [
+    {
+      "id": 1,
+      "title": "Crime in the United States - 2024 Preliminary Report",
+      "url": "https://fbi.gov/services/cjis/ucr/crime-us-2024-preliminary",
+      "source": "FBI",
+      "date": "2024-12-15",
+      "type": "general",
+      "relevance": "Official national crime statistics showing overall decreases",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 2,
+      "title": "Violent Crime Rates: 30-Year Trend Analysis",
+      "url": "https://bjs.gov/content/pub/pdf/cv24.pdf",
+      "source": "Bureau of Justice Statistics",
+      "date": "2024-10-20",
+      "type": "research",
+      "relevance": "Long-term data showing current rates well below historical peaks",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 3,
+      "title": "Urban Crime Trends: A Mixed Picture in 2024",
+      "url": "https://brennancenter.org/our-work/analysis-opinion/urban-crime-trends-2024",
+      "source": "Brennan Center for Justice",
+      "author": "Dr. Emma Rodriguez",
+      "date": "2024-08-20",
+      "type": "research",
+      "relevance": "Nuanced analysis showing localized increases amid national decreases",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 4,
+      "title": "Fact Check: Crime Statistics Often Misrepresented",
+      "url": "https://factcheck.org/2024/10/crime-statistics-context/",
+      "source": "FactCheck.org",
+      "date": "2024-10-15",
+      "type": "general",
+      "relevance": "Analysis of how crime data is frequently presented without context",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 5,
+      "title": "Historical Crime Rates: 1960-2024",
+      "url": "https://ucr.fbi.gov/crime-in-the-u.s/2024/preliminary-report/tables/historical-data",
+      "source": "FBI",
+      "date": "2024-12-15",
+      "type": "historical",
+      "relevance": "Comprehensive historical data showing 1990s peaks and current lows",
+      "credibility": "HIGH"
+    },
+    {
+      "id": 6,
+      "title": "Crime Perception vs. Reality: A 2024 Study",
+      "url": "https://journals.sagepub.com/doi/10.1177/crime-perception-2024",
+      "source": "Journal of Criminal Justice",
+      "author": "Chen, M. et al.",
+      "date": "2024-09-10",
+      "type": "research",
+      "relevance": "Research showing public perception of crime often diverges from statistics",
+      "credibility": "HIGH"
+    }
+  ],
+  
+  "processing_metadata": {
+    "processing_time_ms": 9200,
+    "token_usage": {
+      "input_tokens": 13800,
+      "output_tokens": 1050,
+      "total_cost_usd": 0.0385
+    }
+  }
+}
+```
+
+---
+
+### Key Components of Each Analysis
+
+Every claim validation includes:
+
+1. **Verdict** - TRUE, FALSE, MISLEADING, or UNVERIFIABLE
+2. **Confidence** - 0-100 score of certainty
+3. **Summary** - 1-2 sentence explanation with citations
+4. **Key Findings** - 3-6 bullet points showing **WHY** the verdict was reached
+5. **Temporal Analysis** - Time-based context and currency evaluation
+6. **Contradictions** - Conflicting evidence (if any)
+7. **Sources** - 5-10 most credible sources with full metadata
+8. **Processing Metadata** - Cost and performance metrics
 
 ### 6.2: Raw Evidence Section
 

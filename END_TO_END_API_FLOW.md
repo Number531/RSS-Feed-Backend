@@ -9,14 +9,15 @@ This document details the complete data flow from API call to final output, show
 ## Table of Contents
 
 1. [High-Level Flow Summary](#high-level-flow-summary)
-2. [Stage 1: Content Extraction](#stage-1-content-extraction)
-3. [Stage 2: Claim Extraction](#stage-2-claim-extraction)
-4. [Stage 3: Evidence Search](#stage-3-evidence-search)
-5. [Stage 4: Claim Validation](#stage-4-claim-validation)
-6. [Stage 5: Article Generation](#stage-5-article-generation)
-7. [Stage 6: Final Output](#stage-6-final-output)
-8. [Complete Example Response](#complete-example-response)
-9. [Database Storage Structure](#database-storage-structure)
+2. [Processing Modes: Summary vs Claims](#processing-modes-summary-vs-claims)
+3. [Stage 1: Content Extraction](#stage-1-content-extraction)
+4. [Stage 2: Claim Extraction](#stage-2-claim-extraction)
+5. [Stage 3: Evidence Search](#stage-3-evidence-search)
+6. [Stage 4: Claim Validation](#stage-4-claim-validation)
+7. [Stage 5: Article Generation](#stage-5-article-generation)
+8. [Stage 6: Final Output](#stage-6-final-output)
+9. [Complete Example Response](#complete-example-response)
+10. [Database Storage Structure](#database-storage-structure)
 
 ---
 
@@ -40,6 +41,248 @@ User → API Call (URL)
 
 **Processing Time**: 30-60 seconds for typical article (10 claims)  
 **Cost**: ~$0.40 total (~$0.04 per claim)
+
+---
+
+## Processing Modes: Summary vs Claims
+
+The system supports **two processing modes** with different approaches to fact-checking:
+
+### Claims Mode (Default)
+
+**What it does**: Extracts individual factual claims and validates each one separately.
+
+**Use Cases**:
+- Detailed fact-checking of specific assertions
+- Breaking down complex articles into verifiable statements
+- When you need granular claim-by-claim verdicts
+- Articles with multiple distinct claims
+
+**Process**:
+1. Extract 5-20 individual claims from article
+2. Filter to HIGH-risk claims only (typically 3-10 claims)
+3. Search for evidence for each claim (25 sources per claim)
+4. Validate each claim independently
+5. Generate article synthesizing all validations
+
+**Output Example**:
+```json
+{
+  "statistics": {
+    "total_claims": 15,
+    "high_risk_claims": 10,
+    "validated_claims": 10
+  },
+  "validation_results": [
+    {
+      "claim": "The Federal Reserve raised interest rates to 5.5%",
+      "verdict": "TRUE",
+      "confidence": 95
+    },
+    {
+      "claim": "Unemployment reached 15% in 2024",
+      "verdict": "FALSE",
+      "confidence": 98
+    },
+    {
+      "claim": "Inflation is at historic highs",
+      "verdict": "MISLEADING",
+      "confidence": 87
+    }
+    // ... 7 more claims
+  ]
+}
+```
+
+**Cost**: ~$0.40 for 10 claims  
+**Processing Time**: 30-60 seconds
+
+---
+
+### Summary Mode (Narrative Analysis)
+
+**What it does**: Generates a comprehensive summary of the article's main narrative and validates it as a single cohesive claim.
+
+**Use Cases**:
+- Opinion pieces or editorials (hard to extract discrete claims)
+- Analysis articles with complex interconnected arguments
+- When you want overall narrative verification, not granular checking
+- Articles with subjective framing requiring context evaluation
+
+**Process**:
+1. Generate comprehensive article summary (2-3 sentences)
+2. Extract key factual claims within the narrative
+3. Identify bias indicators and rhetorical approach
+4. Treat entire summary as a single HIGH-risk claim
+5. Search for evidence (25 sources for the narrative)
+6. Validate overall narrative coherence and factual basis
+
+**Summary Generation Output**:
+```json
+{
+  "summary_statement": "The article argues that recent Federal Reserve policies have successfully controlled inflation through aggressive interest rate increases, citing December 2024's rate hike to 5.5% as evidence of continued tightening despite some economic slowdown concerns.",
+  
+  "key_factual_claims": [
+    "Fed raised rates to 5.5% in December 2024",
+    "Inflation has been successfully controlled",
+    "There are economic slowdown concerns"
+  ],
+  
+  "main_actors": [
+    {"name": "Federal Reserve", "role": "Policy decision maker"},
+    {"name": "Jerome Powell", "role": "Fed Chair cited in article"}
+  ],
+  
+  "temporal_context": {
+    "time_period": "2024, focusing on December policy decision",
+    "publication_date": "2025-01-15",
+    "temporal_claims": [
+      "Recent policy decisions",
+      "Current inflation levels"
+    ]
+  },
+  
+  "narrative_classification": {
+    "primary_type": "Policy Analysis",
+    "narrative_stance": "Supportive of Fed actions",
+    "rhetorical_approach": "Evidence-based argumentation"
+  },
+  
+  "quantitative_claims": [
+    {"value": "5.5%", "metric": "Interest rate", "context": "Fed policy rate"},
+    {"value": "3.4%", "metric": "Inflation rate", "context": "Annual inflation"}
+  ],
+  
+  "causal_claims": [
+    "Interest rate increases → inflation control",
+    "Aggressive tightening → economic slowdown risk"
+  ],
+  
+  "source_attribution": {
+    "primary_sources": ["Federal Reserve", "Bureau of Labor Statistics"],
+    "source_diversity": "Government and official data",
+    "attribution_quality": "HIGH"
+  },
+  
+  "potential_bias_indicators": [
+    "Emphasizes positive outcomes of Fed policy",
+    "Downplays potential economic risks"
+  ],
+  
+  "fact_check_priority": {
+    "risk_level": "HIGH",
+    "priority_reason": "Makes specific economic claims affecting financial decisions",
+    "potential_impact": "Could influence investment and policy perceptions"
+  },
+  
+  "validation_hints": [
+    "Verify specific interest rate figure",
+    "Check if inflation has actually been controlled",
+    "Assess economic slowdown evidence"
+  ],
+  
+  "metadata": {
+    "extraction_confidence": 0.92,
+    "summary_completeness": 0.88,
+    "content_type": "Policy analysis",
+    "word_count": 1200
+  },
+  
+  "generation_metadata": {
+    "model": "gemini-2.0-flash-exp",
+    "mode": "thorough",
+    "timestamp": "2025-01-21T16:00:15Z"
+  }
+}
+```
+
+**Validation Output** (narrative treated as single claim):
+```json
+{
+  "validation_results": [
+    {
+      "claim": "The article argues that recent Federal Reserve policies have successfully controlled inflation through aggressive interest rate increases, citing December 2024's rate hike to 5.5% as evidence...",
+      "verdict": "MOSTLY_TRUE",
+      "confidence": 85,
+      "category": "Narrative Summary",
+      
+      "summary": "The core narrative is largely accurate. The Fed did raise rates to 5.5% in December 2024 [1][2], and inflation has decreased from peak levels [3]. However, characterizing it as 'successfully controlled' is premature given ongoing concerns [4][5].",
+      
+      "key_findings": [
+        "Interest rate increase to 5.5% confirmed by official Fed statements [1][2]",
+        "Inflation decreased from 9.1% peak to 3.4% annually, showing progress [3]",
+        "'Successfully controlled' overstates outcome - inflation still above 2% target [4]",
+        "Economic slowdown concerns are valid based on GDP projections [5][6]",
+        "Narrative's supportive stance aligns with facts but minimizes ongoing risks [7]"
+      ],
+      
+      "temporal_analysis": {
+        "claim_timeframe": "2024 with focus on December",
+        "evidence_currency": "Very current - latest sources from December 2024",
+        "historical_context": "Inflation fight ongoing for 2+ years; December action continues trend",
+        "temporal_verdict": "Narrative accurately reflects recent events but prematurely claims success"
+      },
+      
+      "contradictions": [
+        "Inflation 'successfully controlled' contradicted by Fed's own statements that work is incomplete [4]"
+      ],
+      
+      "sources": [
+        {"id": 1, "title": "Fed Raises Rates to 5.5%", "date": "2024-12-15", "credibility": "HIGH"},
+        {"id": 2, "title": "Federal Reserve Policy Statement", "date": "2024-12-15", "credibility": "HIGH"},
+        {"id": 3, "title": "CPI Data December 2024", "date": "2024-12-12", "credibility": "HIGH"},
+        {"id": 4, "title": "Powell: Inflation Fight Not Over", "date": "2024-12-16", "credibility": "HIGH"},
+        {"id": 5, "title": "GDP Projections Show Slowdown", "date": "2024-12-10", "credibility": "HIGH"}
+      ]
+    }
+  ]
+}
+```
+
+**Cost**: ~$0.05 for summary generation + ~$0.04 for validation = ~$0.09 total  
+**Processing Time**: 8-12 seconds
+
+---
+
+### Comparison Table
+
+| Feature | Claims Mode | Summary Mode |
+|---------|-------------|-------------|
+| **Best For** | Factual articles with discrete claims | Opinion pieces, analysis, editorials |
+| **Claims Extracted** | 5-20 individual claims | 1 narrative summary |
+| **Validated** | 3-10 HIGH-risk claims | 1 comprehensive summary |
+| **Evidence Per Item** | 25 sources per claim | 25 sources for narrative |
+| **Granularity** | Claim-by-claim verdicts | Overall narrative assessment |
+| **Output Verdicts** | Multiple (TRUE/FALSE/MISLEADING) | Single narrative verdict |
+| **Cost** | ~$0.40 (10 claims) | ~$0.09 (1 summary) |
+| **Processing Time** | 30-60 seconds | 8-12 seconds |
+| **Use Case Example** | "Fed raised rates to 5.5%" | "Article argues Fed policy is succeeding" |
+
+---
+
+### When to Use Which Mode
+
+**Use Claims Mode When**:
+- ✅ Article makes specific, verifiable factual assertions
+- ✅ You need granular claim-by-claim verdicts
+- ✅ Claims are independent and can be validated separately
+- ✅ Article is news reporting or data-driven analysis
+- ✅ Example: "Biden's jobs report shows 200K new jobs"
+
+**Use Summary Mode When**:
+- ✅ Article is opinion, editorial, or analysis piece
+- ✅ Claims are interconnected and form a narrative
+- ✅ You want overall narrative assessment, not granular checking
+- ✅ Hard to extract discrete, independent claims
+- ✅ Example: "Op-ed argues Biden's economic policies are failing"
+
+**API Flag**: 
+```json
+{
+  "url": "https://example.com/article",
+  "mode": "summary"  // or "claims" (default)
+}
+```
 
 ---
 

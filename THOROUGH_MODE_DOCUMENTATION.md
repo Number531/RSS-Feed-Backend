@@ -248,8 +248,6 @@ The fact-checking system offers two validation modes: **Summary Mode** (fast, ar
 
 ---
 
----
-
 ## Temporal Analysis Features
 
 Thorough mode integrates temporal context at multiple levels to ensure claim validation is grounded in up-to-date, time-aware analysis.
@@ -722,7 +720,67 @@ Validate this claim using the evidence provided. Include inline citations [1], [
 
 ---
 
-## Validation Prompt Structure
+## Validation Prompt Structures
+
+### Summary Mode Prompt Components
+
+Summary mode uses a simplified prompt focused on overall narrative validation:
+
+```markdown
+# FACT-CHECKING VALIDATION - SUMMARY MODE
+
+You are a professional fact-checker analyzing an article's overall accuracy.
+
+## Article Claims
+{extracted_high_level_claims}
+
+## Evidence Collected (25 sources total)
+
+### News Evidence (Recent developments - last 30 days)
+{formatted_news_evidence}
+
+### Research Evidence (Academic/scientific sources - last 2 years)
+{formatted_research_evidence}
+
+### General Evidence (Expert analysis/fact-checking - last 2 years)
+{formatted_general_evidence}
+
+### Historical Evidence (Historical context/precedents - unlimited timeframe)
+{formatted_historical_evidence}
+
+## Your Task
+
+Provide an overall assessment of the article's accuracy. Follow these guidelines:
+
+### 1. Verdict Classification
+- TRUE: Article is generally accurate
+- FALSE: Article contains major factual errors
+- MISLEADING: Article mixes truth with distortion
+- UNVERIFIABLE: Cannot confirm article's main claims
+
+### 2. Analysis Requirements
+- Evaluate overall narrative accuracy
+- Identify major factual errors if present
+- Assess source credibility
+- Consider context and framing
+
+### 3. Output Format (STRICT JSON)
+{
+  "verdict": "TRUE|FALSE|MISLEADING|UNVERIFIABLE",
+  "credibility_score": 85,
+  "summary": "Brief explanation with citations [1][2]",
+  "sources": [
+    {
+      "id": 1,
+      "title": "Source title",
+      "url": "https://source.url",
+      "source": "Publication name",
+      "date": "2025-01-21",
+      "credibility": "HIGH|MEDIUM|LOW"
+    }
+  ]
+}
+```
 
 ### Thorough Mode Prompt Components
 
@@ -824,9 +882,73 @@ CITATION REQUIREMENTS:
 
 ---
 
-## Output Schema
+## Output Schemas
 
-### Complete Validation Result Structure
+### Summary Mode Validation Result Structure
+
+```typescript
+interface SummaryValidationResult {
+  // Core verdict
+  verdict: "TRUE" | "FALSE" | "MISLEADING" | "UNVERIFIABLE";
+  credibility_score: number; // 0-100
+  
+  // Analysis
+  summary: string; // Brief explanation with citations
+  claims_analyzed: number; // Typically 1-2
+  claims_true: number;
+  claims_false: number;
+  claims_misleading: number;
+  
+  // Sources (from shared evidence pool)
+  sources: Array<{
+    id: number;
+    title: string;
+    url: string;
+    source: string;
+    date: string;
+    credibility: "HIGH" | "MEDIUM" | "LOW";
+  }>;
+  
+  // Metadata
+  num_sources: number; // Typically 25
+  processing_time_ms: number;
+  cost_usd: number;
+}
+```
+
+### Thorough Mode Validation Result Structure
+
+```typescript
+interface SummaryValidationResult {
+  // Core verdict
+  verdict: "TRUE" | "FALSE" | "MISLEADING" | "UNVERIFIABLE";
+  credibility_score: number; // 0-100
+  
+  // Analysis
+  summary: string; // Brief explanation with citations
+  claims_analyzed: number; // Typically 1-2
+  claims_true: number;
+  claims_false: number;
+  claims_misleading: number;
+  
+  // Sources (from shared evidence pool)
+  sources: Array<{
+    id: number;
+    title: string;
+    url: string;
+    source: string;
+    date: string;
+    credibility: "HIGH" | "MEDIUM" | "LOW";
+  }>;
+  
+  // Metadata
+  num_sources: number; // Typically 25
+  processing_time_ms: number;
+  cost_usd: number;
+}
+```
+
+### Thorough Mode Validation Result Structure
 
 ```typescript
 interface ValidationResult {
@@ -970,7 +1092,7 @@ interface ValidationResult {
 
 ### Environment Variables
 
-Key configuration settings for thorough mode:
+Key configuration settings across both modes:
 
 ```bash
 # Validation Mode
@@ -1008,9 +1130,23 @@ MAX_CLAIMS_PER_ARTICLE=20            # Limit claims to validate
 VALIDATE_HIGH_RISK_ONLY=true         # Only validate HIGH-risk claims
 ```
 
-### Typical Costs Per Claim
+## Cost & Performance
 
-**Thorough Mode Cost Breakdown**:
+### Summary Mode Costs
+
+| Component | Tokens | Cost (USD) |
+|-----------|--------|------------|
+| Exa searches (4 queries) | - | $0.010 |
+| Gemini input (~8K tokens) | 8,000 | $0.010 |
+| Gemini output (~500 tokens) | 500 | $0.007 |
+| **Total per article** | - | **$0.027** |
+
+**Processing**:
+- Total cost: ~$0.04 per article
+- Processing time: 3-4 minutes
+- Total sources reviewed: 25
+
+### Thorough Mode Costs
 
 | Component | Tokens | Cost (USD) |
 |-----------|--------|------------|
@@ -1021,8 +1157,18 @@ VALIDATE_HIGH_RISK_ONLY=true         # Only validate HIGH-risk claims
 
 **Full Article (10 claims)**:
 - Total cost: ~$0.37
-- Processing time: 30-60 seconds
+- Processing time: 4-5 minutes
 - Total sources reviewed: 250 (25 per claim)
+
+### Cost Comparison
+
+| Metric | Summary Mode | Thorough Mode (10 claims) |
+|--------|--------------|---------------------------|
+| Total Cost | $0.04 | $0.37 |
+| Cost Multiplier | 1x | ~9x |
+| Sources | 25 | 250 |
+| Processing Time | 3-4 min | 4-5 min |
+| Granularity | Article-level | Claim-level |
 
 ---
 

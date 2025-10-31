@@ -196,3 +196,108 @@ class AnalyticsRepository:
         rows = result.mappings().all()
         
         return [dict(row) for row in rows]
+    
+    # === Phase 2A Methods ===
+    
+    async def get_aggregate_statistics(self) -> Dict[str, Any]:
+        """
+        Get high-level aggregate statistics across all data.
+        
+        Returns:
+            Dict with lifetime and current month statistics
+        """
+        # Lifetime stats
+        lifetime_query = (
+            select(
+                func.count(ArticleFactCheck.id).label('total_fact_checks'),
+                func.count(func.distinct(Article.rss_source_id)).label('sources_monitored'),
+                func.sum(ArticleFactCheck.claims_analyzed).label('total_claims'),
+                func.avg(ArticleFactCheck.credibility_score).label('avg_credibility')
+            )
+            .select_from(ArticleFactCheck)
+            .join(Article, Article.id == ArticleFactCheck.article_id)
+        )
+        
+        lifetime_result = await self.db.execute(lifetime_query)
+        lifetime_row = lifetime_result.mappings().first()
+        
+        # Current month stats
+        month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_query = (
+            select(
+                func.count(ArticleFactCheck.id).label('articles_this_month'),
+                func.avg(ArticleFactCheck.credibility_score).label('avg_credibility_this_month')
+            )
+            .select_from(ArticleFactCheck)
+            .join(Article, Article.id == ArticleFactCheck.article_id)
+            .where(Article.created_at >= month_start)
+        )
+        
+        month_result = await self.db.execute(month_query)
+        month_row = month_result.mappings().first()
+        
+        # Previous month for comparison
+        prev_month_start = (month_start - timedelta(days=1)).replace(day=1)
+        prev_month_query = (
+            select(
+                func.count(ArticleFactCheck.id).label('articles_last_month'),
+                func.avg(ArticleFactCheck.credibility_score).label('avg_credibility_last_month')
+            )
+            .select_from(ArticleFactCheck)
+            .join(Article, Article.id == ArticleFactCheck.article_id)
+            .where(
+                and_(
+                    Article.created_at >= prev_month_start,
+                    Article.created_at < month_start
+                )
+            )
+        )
+        
+        prev_month_result = await self.db.execute(prev_month_query)
+        prev_month_row = prev_month_result.mappings().first()
+        
+        return {
+            'lifetime': dict(lifetime_row) if lifetime_row else {},
+            'current_month': dict(month_row) if month_row else {},
+            'previous_month': dict(prev_month_row) if prev_month_row else {}
+        }
+    
+    async def get_category_statistics(
+        self,
+        days: int = 30,
+        min_articles: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Get statistics aggregated by article category.
+        
+        Args:
+            days: Number of days to look back
+            min_articles: Minimum articles required for inclusion
+            
+        Returns:
+            List of category statistics
+        """
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        
+        query = (
+            select(
+                Article.category,
+                func.count(Article.id).label('articles_count'),
+                func.avg(ArticleFactCheck.credibility_score).label('avg_credibility'),
+                func.count(case((ArticleFactCheck.verdict == 'FALSE', 1))).label('false_count'),
+                func.count(case((ArticleFactCheck.verdict.like('%MISLEADING%'), 1))).label('misleading_count'),
+                func.array_agg(func.distinct(RSSSource.source_name)).label('sources')
+            )
+            .select_from(Article)
+            .join(ArticleFactCheck, ArticleFactCheck.article_id == Article.id)
+            .join(RSSSource, RSSSource.id == Article.rss_source_id)
+            .where(Article.created_at >= cutoff_date)
+            .group_by(Article.category)
+            .having(func.count(Article.id) >= min_articles)
+            .order_by(desc('avg_credibility'))
+        )
+        
+        result = await self.db.execute(query)
+        rows = result.mappings().all()
+        
+        return [dict(row) for row in rows]

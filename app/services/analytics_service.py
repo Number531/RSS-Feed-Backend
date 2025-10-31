@@ -6,7 +6,7 @@ temporal trends, claims statistics, and verdict distribution.
 """
 import logging
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.services.base_service import BaseService
 from app.repositories.analytics_repository import AnalyticsRepository
@@ -312,4 +312,203 @@ class AnalyticsService(BaseService):
             
         except Exception as e:
             self.log_error("get_analytics_summary", e)
+            raise
+    
+    # === Phase 2A Methods ===
+    
+    async def get_aggregate_stats(
+        self,
+        include_lifetime: bool = True,
+        include_trends: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Get high-level aggregate statistics across all data.
+        
+        Args:
+            include_lifetime: Include lifetime statistics
+            include_trends: Include month-over-month trend data
+            
+        Returns:
+            Dictionary with aggregate statistics
+        """
+        self.log_operation(
+            "get_aggregate_stats",
+            include_lifetime=include_lifetime,
+            include_trends=include_trends
+        )
+        
+        try:
+            stats = await self.analytics_repo.get_aggregate_statistics()
+            
+            response: Dict[str, Any] = {}
+            
+            # Lifetime statistics
+            if include_lifetime and stats.get('lifetime'):
+                lifetime = stats['lifetime']
+                response['lifetime'] = {
+                    'articles_fact_checked': int(lifetime.get('total_fact_checks', 0)),
+                    'sources_monitored': int(lifetime.get('sources_monitored', 0)),
+                    'claims_verified': int(lifetime.get('total_claims', 0) or 0),
+                    'overall_credibility': float(lifetime.get('avg_credibility', 0) or 0)
+                }
+            
+            # Current month statistics
+            if stats.get('current_month'):
+                current = stats['current_month']
+                response['this_month'] = {
+                    'articles_fact_checked': int(current.get('articles_this_month', 0)),
+                    'avg_credibility': float(current.get('avg_credibility_this_month', 0) or 0)
+                }
+                
+                # Calculate trends if requested
+                if include_trends and stats.get('previous_month'):
+                    prev = stats['previous_month']
+                    prev_count = int(prev.get('articles_last_month', 0))
+                    curr_count = int(current.get('articles_this_month', 0))
+                    
+                    if prev_count > 0:
+                        volume_change = ((curr_count - prev_count) / prev_count) * 100
+                        response['this_month']['volume_change'] = f"{volume_change:+.1f}%"
+                    
+                    prev_cred = float(prev.get('avg_credibility_last_month', 0) or 0)
+                    curr_cred = float(current.get('avg_credibility_this_month', 0) or 0)
+                    
+                    if prev_cred > 0:
+                        cred_change = ((curr_cred - prev_cred) / prev_cred) * 100
+                        response['this_month']['credibility_change'] = f"{cred_change:+.1f}%"
+            
+            # Generate milestones
+            if include_lifetime and stats.get('lifetime'):
+                milestones = []
+                lifetime = stats['lifetime']
+                
+                fact_checks = int(lifetime.get('total_fact_checks', 0))
+                if fact_checks >= 10000:
+                    milestones.append("10,000+ articles fact-checked")
+                elif fact_checks >= 5000:
+                    milestones.append("5,000+ articles fact-checked")
+                elif fact_checks >= 1000:
+                    milestones.append("1,000+ articles fact-checked")
+                
+                sources = int(lifetime.get('sources_monitored', 0))
+                if sources >= 50:
+                    milestones.append("50+ sources monitored")
+                elif sources >= 25:
+                    milestones.append("25+ sources monitored")
+                
+                response['milestones'] = milestones
+            
+            logger.info("Retrieved aggregate statistics")
+            return response
+            
+        except Exception as e:
+            self.log_error("get_aggregate_stats", e)
+            raise
+    
+    async def get_category_analytics(
+        self,
+        days: int = 30,
+        min_articles: int = 5,
+        sort_by: str = "credibility"
+    ) -> Dict[str, Any]:
+        """
+        Get statistics aggregated by article category.
+        
+        Args:
+            days: Number of days to look back (1-365)
+            min_articles: Minimum articles required for inclusion (1-100)
+            sort_by: Sort field ('credibility', 'volume', 'false_rate')
+            
+        Returns:
+            Dictionary with category analytics
+            
+        Raises:
+            ValidationError: If parameters are invalid
+        """
+        self.log_operation(
+            "get_category_analytics",
+            days=days,
+            min_articles=min_articles,
+            sort_by=sort_by
+        )
+        
+        # Validate parameters
+        if days < 1 or days > 365:
+            raise ValidationError("Days parameter must be between 1 and 365")
+        
+        if min_articles < 1 or min_articles > 100:
+            raise ValidationError("min_articles parameter must be between 1 and 100")
+        
+        valid_sort_fields = {'credibility', 'volume', 'false_rate'}
+        if sort_by not in valid_sort_fields:
+            raise ValidationError(
+                f"sort_by must be one of: {', '.join(valid_sort_fields)}"
+            )
+        
+        try:
+            categories = await self.analytics_repo.get_category_statistics(
+                days=days,
+                min_articles=min_articles
+            )
+            
+            # Transform and enrich data
+            enriched_categories = []
+            for cat in categories:
+                articles_count = int(cat.get('articles_count', 0))
+                false_count = int(cat.get('false_count', 0))
+                misleading_count = int(cat.get('misleading_count', 0))
+                
+                # Calculate false rate
+                false_rate = 0.0
+                if articles_count > 0:
+                    false_rate = (false_count + misleading_count) / articles_count
+                
+                # Determine risk level
+                risk_level = "low"
+                if false_rate >= 0.5:
+                    risk_level = "critical"
+                elif false_rate >= 0.3:
+                    risk_level = "high"
+                elif false_rate >= 0.15:
+                    risk_level = "medium"
+                
+                # Get top 3 sources
+                sources = cat.get('sources', [])
+                top_sources = sources[:3] if sources else []
+                
+                enriched_categories.append({
+                    'category': cat.get('category'),
+                    'articles_count': articles_count,
+                    'avg_credibility': float(cat.get('avg_credibility', 0) or 0),
+                    'false_rate': round(false_rate, 3),
+                    'risk_level': risk_level,
+                    'top_sources': top_sources
+                })
+            
+            # Apply sorting
+            if sort_by == 'volume':
+                enriched_categories.sort(key=lambda x: x['articles_count'], reverse=True)
+            elif sort_by == 'false_rate':
+                enriched_categories.sort(key=lambda x: x['false_rate'], reverse=True)
+            # 'credibility' is already sorted by default from repository
+            
+            response = {
+                'categories': enriched_categories,
+                'total_categories': len(enriched_categories),
+                'period': {
+                    'days': days,
+                    'start_date': (datetime.utcnow() - timedelta(days=days)).isoformat(),
+                    'end_date': datetime.utcnow().isoformat()
+                },
+                'criteria': {
+                    'min_articles': min_articles,
+                    'sort_by': sort_by
+                }
+            }
+            
+            logger.info(f"Retrieved {len(enriched_categories)} category analytics for {days} days")
+            return response
+            
+        except Exception as e:
+            self.log_error("get_category_analytics", e)
             raise

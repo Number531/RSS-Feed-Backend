@@ -579,5 +579,11 @@ async def main():
         sys.exit(1)
 
 
+    finally:
+        # Clean up database connections
+        await engine.dispose()
+        console.print("\n[dim]🔌 Database connections closed[/dim]")
+
+
 if __name__ == "__main__":
     asyncio.run(main())

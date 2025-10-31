@@ -577,6 +577,10 @@ async def main():
         import traceback
         console.print(traceback.format_exc())
         sys.exit(1)
+    finally:
+        # Clean up database connections
+        await engine.dispose()
+        console.print("\n[dim]🔌 Database connections closed[/dim]")
 
 
 if __name__ == "__main__":

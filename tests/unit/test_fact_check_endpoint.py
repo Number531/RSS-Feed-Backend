@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 from fastapi import HTTPException
 
 from app.api.v1.endpoints.fact_check import get_article_fact_check
-from app.models.fact_check import FactCheck
+from app.models.fact_check import ArticleFactCheck
 
 
 @pytest.mark.unit
@@ -17,7 +17,7 @@ async def test_get_article_fact_check_success():
     """Test successful retrieval of fact-check details."""
     # Arrange
     article_id = uuid4()
-    fact_check = FactCheck(
+    fact_check = ArticleFactCheck(
         id=uuid4(),
         article_id=article_id,
         job_id="test-job-123",
@@ -89,7 +89,7 @@ async def test_get_article_fact_check_with_minimal_data():
     """Test fact-check with minimal optional fields."""
     # Arrange
     article_id = uuid4()
-    fact_check = FactCheck(
+    fact_check = ArticleFactCheck(
         id=uuid4(),
         article_id=article_id,
         job_id="test-job-456",

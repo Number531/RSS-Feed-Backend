@@ -186,3 +186,46 @@ class AnalyticsSummaryResponse(BaseModel):
     claims_statistics: Dict[str, Any] = Field(..., description="Claims data")
     verdict_distribution: List[VerdictDistributionItem] = Field(..., description="Verdict breakdown")
     summary_metrics: Dict[str, Any] = Field(..., description="Overall metrics")
+
+
+# === Phase 2A Schemas ===
+
+class LifetimeStats(BaseModel):
+    """Lifetime aggregate statistics."""
+    articles_fact_checked: int = Field(..., description="Total articles fact-checked")
+    sources_monitored: int = Field(..., description="Number of sources monitored")
+    claims_verified: int = Field(..., description="Total claims verified")
+    overall_credibility: float = Field(..., description="Overall credibility score")
+
+
+class CurrentPeriodStats(BaseModel):
+    """Current period statistics with trends."""
+    articles_fact_checked: int = Field(..., description="Articles this period")
+    avg_credibility: float = Field(..., description="Average credibility")
+    volume_change: Optional[str] = Field(None, description="Volume change percentage")
+    credibility_change: Optional[str] = Field(None, description="Credibility change percentage")
+
+
+class AggregateStatsResponse(BaseModel):
+    """Response for aggregate statistics endpoint."""
+    lifetime: Optional[LifetimeStats] = Field(None, description="Lifetime statistics")
+    this_month: CurrentPeriodStats = Field(..., description="Current month stats")
+    milestones: List[str] = Field(default_factory=list, description="Achievement milestones")
+
+
+class CategoryAnalytics(BaseModel):
+    """Analytics for a single category."""
+    category: str = Field(..., description="Category name")
+    articles_count: int = Field(..., description="Number of articles")
+    avg_credibility: float = Field(..., description="Average credibility score")
+    false_rate: float = Field(..., description="False content rate")
+    risk_level: str = Field(..., description="Risk level (low/medium/high/critical)")
+    top_sources: List[str] = Field(..., description="Top sources in category")
+
+
+class CategoryAnalyticsResponse(BaseModel):
+    """Response for category analytics endpoint."""
+    categories: List[CategoryAnalytics] = Field(..., description="Category statistics")
+    total_categories: int = Field(..., description="Number of categories")
+    period: Dict[str, Any] = Field(..., description="Analysis period")
+    criteria: Dict[str, Any] = Field(..., description="Filtering criteria")

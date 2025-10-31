@@ -4,15 +4,17 @@ Analytics API Endpoints
 Provides REST API endpoints for fact-check analytics including source reliability,
 temporal trends, and claims statistics.
 """
-from typing import Optional
+from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+import logging
 
 from app.db.session import get_db
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.services.analytics_service import AnalyticsService
 from app.core.exceptions import ValidationError
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -360,3 +362,65 @@ async def get_claims_analytics(
             status_code=500,
             detail=f"Failed to retrieve claims analytics: {str(e)}"
         )
+
+
+# === Phase 2A Endpoints ===
+
+@router.get(
+    "/stats",
+    response_model=Dict[str, Any],
+    summary="Get aggregate statistics",
+    description="High-level statistics across all fact-check data including lifetime totals and monthly trends."
+)
+async def get_aggregate_statistics(
+    include_lifetime: bool = Query(True, description="Include lifetime statistics"),
+    include_trends: bool = Query(True, description="Include month-over-month trends"),
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
+    """Get aggregate statistics."""
+    try:
+        analytics_repo = AnalyticsRepository(db)
+        analytics_service = AnalyticsService(analytics_repo)
+        
+        result = await analytics_service.get_aggregate_stats(
+            include_lifetime=include_lifetime,
+            include_trends=include_trends
+        )
+        return result
+        
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error retrieving aggregate statistics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve aggregate statistics")
+
+
+@router.get(
+    "/categories",
+    response_model=Dict[str, Any],
+    summary="Get category analytics",
+    description="Statistics aggregated by article category with risk levels and top sources."
+)
+async def get_category_analytics(
+    days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
+    min_articles: int = Query(5, ge=1, le=100, description="Minimum articles per category"),
+    sort_by: str = Query("credibility", pattern="^(credibility|volume|false_rate)$"),
+    db: AsyncSession = Depends(get_db)
+) -> Dict[str, Any]:
+    """Get category analytics."""
+    try:
+        analytics_repo = AnalyticsRepository(db)
+        analytics_service = AnalyticsService(analytics_repo)
+        
+        result = await analytics_service.get_category_analytics(
+            days=days,
+            min_articles=min_articles,
+            sort_by=sort_by
+        )
+        return result
+        
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error retrieving category analytics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve category analytics")

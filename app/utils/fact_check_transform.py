@@ -51,7 +51,8 @@ def calculate_credibility_score(validation_results: List[Dict[str, Any]]) -> int
     total_weight = 0.0
     
     for result in validation_results:
-        validation_output = result.get("validation_output", {})
+        # API uses 'validation_result' not 'validation_output'
+        validation_output = result.get("validation_result", result.get("validation_output", {}))
         verdict = validation_output.get("verdict", "UNVERIFIED")
         confidence = validation_output.get("confidence", 0.5)
         
@@ -104,7 +105,8 @@ def calculate_verdict_counts(validation_results: List[Dict[str, Any]]) -> Dict[s
     }
     
     for result in validation_results:
-        validation_output = result.get("validation_output", {})
+        # API uses 'validation_result' not 'validation_output'
+        validation_output = result.get("validation_result", result.get("validation_output", {}))
         verdict = validation_output.get("verdict", "UNVERIFIED")
         
         # Normalize verdict
@@ -169,7 +171,8 @@ def transform_api_result_to_db(
     
     # Get primary result (first validation result for summary mode)
     primary_result = validation_results[0]
-    validation_output = primary_result.get("validation_output", {})
+    # API uses 'validation_result' not 'validation_output'
+    validation_output = primary_result.get("validation_result", primary_result.get("validation_output", {}))
     
     # Extract verdict
     verdict = validation_output.get("verdict", "UNVERIFIED")
@@ -256,7 +259,9 @@ def extract_primary_verdict(validation_results: List[Dict[str, Any]]) -> str:
     
     if len(validation_results) == 1:
         # Summary mode - single result
-        return validation_results[0].get("validation_output", {}).get("verdict", "UNVERIFIED")
+        # API uses 'validation_result' not 'validation_output'
+        validation_output = validation_results[0].get("validation_result", validation_results[0].get("validation_output", {}))
+        return validation_output.get("verdict", "UNVERIFIED")
     
     # Detailed mode - count verdicts
     verdict_counts = calculate_verdict_counts(validation_results)

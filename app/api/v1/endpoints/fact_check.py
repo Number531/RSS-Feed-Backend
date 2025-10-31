@@ -5,8 +5,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_db
-from app.models.fact_check import FactCheck
+from app.db.session import get_db
+from app.models.fact_check import ArticleFactCheck
 from app.schemas.fact_check import FactCheckResponse
 from sqlalchemy import select
 
@@ -119,7 +119,7 @@ async def get_article_fact_check(
     """
     # Query for fact-check by article_id
     result = await db.execute(
-        select(FactCheck).where(FactCheck.article_id == article_id)
+        select(ArticleFactCheck).where(ArticleFactCheck.article_id == article_id)
     )
     fact_check = result.scalar_one_or_none()
     

@@ -14,9 +14,11 @@ The Analytics API provides comprehensive insights into fact-checking activities,
 
 1. [Authentication](#authentication)
 2. [Endpoints](#endpoints)
-   - [Get Source Reliability Statistics](#1-get-source-reliability-statistics)
-   - [Get Fact-Check Trends](#2-get-fact-check-trends)
-   - [Get Claims Analytics](#3-get-claims-analytics)
+   - [Get Aggregate Statistics](#1-get-aggregate-statistics) ⭐ **Phase 2A**
+   - [Get Category Analytics](#2-get-category-analytics) ⭐ **Phase 2A**
+   - [Get Source Reliability Statistics](#3-get-source-reliability-statistics)
+   - [Get Fact-Check Trends](#4-get-fact-check-trends)
+   - [Get Claims Analytics](#5-get-claims-analytics)
 3. [Data Models](#data-models)
 4. [Error Responses](#error-responses)
 5. [Usage Examples](#usage-examples)
@@ -36,7 +38,209 @@ Authorization: Bearer <your_jwt_token>
 
 ## Endpoints
 
-### 1. Get Source Reliability Statistics
+### 1. Get Aggregate Statistics
+
+⭐ **NEW - Phase 2A**: Comprehensive dashboard overview with lifetime metrics, monthly comparisons, and milestone tracking.
+
+Retrieves high-level aggregate statistics across all fact-checking activities, providing a complete overview of the platform's health and performance.
+
+#### Endpoint
+
+```http
+GET /api/v1/analytics/stats
+```
+
+#### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `include_lifetime` | boolean | No | `true` | Include lifetime statistics |
+| `include_trends` | boolean | No | `true` | Calculate month-over-month trends |
+
+#### Request Example
+
+```http
+GET /api/v1/analytics/stats?include_lifetime=true&include_trends=true
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### Response
+
+**Status Code:** `200 OK`
+
+```json
+{
+  "lifetime": {
+    "articles_fact_checked": 1500,
+    "sources_monitored": 25,
+    "claims_verified": 4500,
+    "average_credibility": 75.5
+  },
+  "this_month": {
+    "articles_fact_checked": 150,
+    "average_credibility": 78.2,
+    "volume_change": 25.0,
+    "credibility_change": 2.89
+  },
+  "milestones": [
+    {
+      "milestone": "1000_articles",
+      "label": "1,000 Articles Fact-Checked",
+      "achieved": true,
+      "achieved_at": "2025-09-15T10:30:00Z"
+    },
+    {
+      "milestone": "5000_claims",
+      "label": "5,000 Claims Verified",
+      "achieved": false,
+      "progress": 90.0
+    }
+  ]
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `lifetime.articles_fact_checked` | integer | Total articles fact-checked (all-time) |
+| `lifetime.sources_monitored` | integer | Total unique RSS sources monitored |
+| `lifetime.claims_verified` | integer | Total individual claims verified |
+| `lifetime.average_credibility` | decimal | Overall average credibility score (0-100) |
+| `this_month.articles_fact_checked` | integer | Articles fact-checked this month |
+| `this_month.average_credibility` | decimal | Average credibility this month (0-100) |
+| `this_month.volume_change` | decimal | % change in volume vs last month |
+| `this_month.credibility_change` | decimal | % change in credibility vs last month |
+| `milestones` | array | Platform milestones and achievements |
+| `milestones[].milestone` | string | Milestone identifier |
+| `milestones[].label` | string | Human-readable milestone description |
+| `milestones[].achieved` | boolean | Whether milestone is completed |
+| `milestones[].achieved_at` | string (ISO 8601) | When milestone was achieved (if completed) |
+| `milestones[].progress` | decimal | Progress towards milestone (0-100, if not achieved) |
+
+#### Use Cases
+
+- **Dashboard Overview**: Display key metrics on main analytics dashboard
+- **Executive Summary**: Provide high-level platform health to stakeholders
+- **Progress Tracking**: Monitor month-over-month growth and trends
+- **Gamification**: Display milestones to engage users
+- **Reporting**: Generate monthly/quarterly performance reports
+
+---
+
+### 2. Get Category Analytics
+
+⭐ **NEW - Phase 2A**: Deep-dive into category-level performance with risk assessment, false rate tracking, and source attribution.
+
+Retrieves comprehensive analytics grouped by article category, including credibility metrics, misinformation rates, risk levels, and top sources per category.
+
+#### Endpoint
+
+```http
+GET /api/v1/analytics/categories
+```
+
+#### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `days` | integer | No | `30` | Time period for analysis (1-365 days) |
+| `min_articles` | integer | No | `5` | Minimum articles to include category (1-100) |
+| `sort_by` | string | No | `credibility` | Sort field: `credibility`, `volume`, `false_rate` |
+
+#### Request Examples
+
+**Basic Request:**
+```http
+GET /api/v1/analytics/categories?days=30
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**With Sorting:**
+```http
+GET /api/v1/analytics/categories?days=7&min_articles=10&sort_by=false_rate
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### Response
+
+**Status Code:** `200 OK`
+
+```json
+{
+  "categories": [
+    {
+      "category": "politics",
+      "articles_count": 50,
+      "avg_credibility": 72.5,
+      "false_rate": 16.0,
+      "misleading_rate": 10.0,
+      "risk_level": "high",
+      "top_sources": ["CNN", "Fox News", "BBC"]
+    },
+    {
+      "category": "health",
+      "articles_count": 25,
+      "avg_credibility": 88.5,
+      "false_rate": 4.0,
+      "misleading_rate": 0.0,
+      "risk_level": "low",
+      "top_sources": ["WHO", "CDC", "WebMD"]
+    }
+  ],
+  "total_categories": 2,
+  "period": {
+    "days": 30,
+    "start_date": "2025-10-01T00:00:00Z",
+    "end_date": "2025-10-31T00:00:00Z"
+  },
+  "criteria": {
+    "min_articles": 5,
+    "sort_by": "credibility"
+  }
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `categories` | array | List of category-level analytics |
+| `categories[].category` | string | Category name (e.g., "politics", "health") |
+| `categories[].articles_count` | integer | Number of articles in this category |
+| `categories[].avg_credibility` | decimal | Average credibility score (0-100) |
+| `categories[].false_rate` | decimal | Percentage of false articles (%) |
+| `categories[].misleading_rate` | decimal | Percentage of misleading articles (%) |
+| `categories[].risk_level` | string | Risk assessment: `low`, `medium`, `high`, `critical` |
+| `categories[].top_sources` | array | Top 3 sources by volume in this category |
+| `total_categories` | integer | Total number of categories |
+| `period.days` | integer | Time period analyzed |
+| `period.start_date` | string (ISO 8601) | Start of analysis period |
+| `period.end_date` | string (ISO 8601) | End of analysis period |
+| `criteria.min_articles` | integer | Minimum articles filter applied |
+| `criteria.sort_by` | string | Sorting method used |
+
+#### Risk Level Calculation
+
+| Risk Level | Criteria |
+|------------|----------|
+| `low` | False rate < 10% AND Credibility > 80 |
+| `medium` | False rate 10-20% OR Credibility 60-80 |
+| `high` | False rate 20-30% OR Credibility 40-60 |
+| `critical` | False rate > 30% OR Credibility < 40 |
+
+#### Use Cases
+
+- **Category Filtering**: Allow users to filter by category risk level
+- **Content Moderation**: Identify high-risk categories needing attention
+- **Source Prioritization**: Show which sources dominate each category
+- **Topic Analysis**: Compare misinformation rates across topics
+- **Alert Systems**: Trigger warnings for categories with high false rates
+- **Editorial Planning**: Focus fact-checking resources on high-risk categories
+
+---
+
+### 3. Get Source Reliability Statistics
 
 Retrieves aggregated credibility metrics for RSS sources based on their fact-checked articles.
 
@@ -122,7 +326,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 
-### 2. Get Fact-Check Trends
+### 4. Get Fact-Check Trends
 
 Retrieves temporal trends of fact-checking activity with configurable granularity.
 
@@ -234,7 +438,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 
-### 3. Get Claims Analytics
+### 5. Get Claims Analytics
 
 Retrieves comprehensive statistics about individual claims extracted from articles.
 
@@ -471,6 +675,22 @@ headers = {
     "Authorization": f"Bearer {TOKEN}"
 }
 
+# Get aggregate statistics (Phase 2A)
+response = requests.get(
+    f"{API_BASE}/stats",
+    headers=headers,
+    params={"include_lifetime": True, "include_trends": True}
+)
+stats = response.json()
+
+# Get category analytics (Phase 2A)
+response = requests.get(
+    f"{API_BASE}/categories",
+    headers=headers,
+    params={"days": 30, "min_articles": 5, "sort_by": "false_rate"}
+)
+categories = response.json()
+
 # Get source reliability
 response = requests.get(
     f"{API_BASE}/sources",
@@ -511,6 +731,18 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
+// Get aggregate statistics (Phase 2A)
+const stats = await fetch(
+  `${API_BASE}/stats?include_lifetime=true&include_trends=true`,
+  { headers }
+).then(res => res.json());
+
+// Get category analytics (Phase 2A)
+const categories = await fetch(
+  `${API_BASE}/categories?days=30&sort_by=false_rate`,
+  { headers }
+).then(res => res.json());
+
 // Get source reliability
 const sources = await fetch(
   `${API_BASE}/sources?days=30&min_articles=5`,
@@ -535,6 +767,14 @@ const claims = await fetch(
 ```bash
 # Set your token
 TOKEN="your_jwt_token_here"
+
+# Get aggregate statistics (Phase 2A)
+curl -X GET "http://localhost:8000/api/v1/analytics/stats?include_lifetime=true&include_trends=true" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Get category analytics (Phase 2A)
+curl -X GET "http://localhost:8000/api/v1/analytics/categories?days=30&min_articles=5&sort_by=false_rate" \
+  -H "Authorization: Bearer $TOKEN"
 
 # Get source reliability
 curl -X GET "http://localhost:8000/api/v1/analytics/sources?days=30&min_articles=5" \
@@ -592,6 +832,30 @@ X-RateLimit-Reset: 1698765432
 ---
 
 ## Changelog
+
+### Version 1.1.0 (2025-10-31) - Phase 2A
+
+**New Endpoints**
+
+- ⭐ **Aggregate Statistics** (`/api/v1/analytics/stats`)
+  - Lifetime metrics and monthly comparisons
+  - Month-over-month trend calculations
+  - Platform milestone tracking
+  - Dashboard overview optimized
+
+- ⭐ **Category Analytics** (`/api/v1/analytics/categories`) 
+  - Category-level credibility metrics
+  - False rate and misleading rate tracking
+  - Risk level assessment (low/medium/high/critical)
+  - Top sources per category
+  - Flexible sorting (credibility, volume, false_rate)
+
+**Testing**
+
+- ✅ 16 integration tests for Phase 2A endpoints
+- ✅ 100% test coverage maintained
+- ✅ Validation testing for all parameters
+- ✅ Error handling verification
 
 ### Version 1.0.0 (2025-10-31)
 

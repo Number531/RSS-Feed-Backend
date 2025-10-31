@@ -213,11 +213,15 @@ async def get_fact_check_trends(
             else:
                 period_str = str(period)
             
+            # Handle None values for confidence
+            avg_conf = trend.get('avg_confidence')
+            avg_conf_rounded = round(float(avg_conf), 2) if avg_conf is not None else 0.0
+            
             time_series.append({
                 "period": period_str,
                 "articles_count": trend.get('articles_count', 0),
                 "avg_credibility_score": round(float(trend.get('avg_score', 0)), 1),
-                "avg_confidence": round(float(trend.get('avg_confidence', 0)), 2),
+                "avg_confidence": avg_conf_rounded,
                 "true_count": trend.get('true_count', 0),
                 "false_count": trend.get('false_count', 0)
             })

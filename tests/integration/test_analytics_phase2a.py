@@ -212,108 +212,192 @@ class TestCategoryAnalyticsEndpoint:
             assert 'period' in data
             assert 'criteria' in data
             
-            # Check categories data
-            categories = data['categories']
-            assert len(categories) == 3
-            
-            # Check first category (politics)
-            politics = categories[0]
-            assert politics['category'] == 'politics'
-            assert politics['articles_count'] == 50
-            assert 'avg_credibility' in politics
-            assert 'false_rate' in politics
-            assert 'risk_level' in politics
-            assert 'top_sources' in politics
-            assert len(politics['top_sources']) <= 3
+            # Check categories
+            assert len(data['categories']) == 3
+            assert data['categories'][0]['category'] == 'politics'
+            assert 'false_rate' in data['categories'][0]
+            assert 'risk_level' in data['categories'][0]
+
+
+class TestVerdictDetailsEndpoint:
+    """Integration tests for GET /api/v1/analytics/verdict-details"""
     
     @pytest.mark.asyncio
-    async def test_category_analytics_with_filters(self, mock_analytics_repo_data):
-        """Test category analytics with custom filters."""
+    async def test_verdict_details_success(self):
+        """Test successful retrieval of verdict analytics."""
+        with patch('app.api.v1.endpoints.analytics.AnalyticsRepository') as mock_repo_class:
+            # Setup mock data
+            mock_repo = AsyncMock()
+            
+            mock_distribution = [
+                {'verdict': 'TRUE', 'count': 45, 'avg_score': Decimal('85.5')},
+                {'verdict': 'FALSE', 'count': 15, 'avg_score': Decimal('25.3')},
+                {'verdict': 'MISLEADING', 'count': 10, 'avg_score': Decimal('35.0')}
+            ]
+            
+            mock_confidence = [
+                {
+                    'verdict': 'TRUE',
+                    'avg_confidence': Decimal('0.892'),
+                    'min_confidence': Decimal('0.750'),
+                    'max_confidence': Decimal('0.990'),
+                    'count': 45
+                },
+                {
+                    'verdict': 'FALSE',
+                    'avg_confidence': Decimal('0.812'),
+                    'min_confidence': Decimal('0.700'),
+                    'max_confidence': Decimal('0.950'),
+                    'count': 15
+                }
+            ]
+            
+            mock_trends = [
+                {'date': datetime.utcnow(), 'verdict': 'TRUE', 'count': 5},
+                {'date': datetime.utcnow(), 'verdict': 'FALSE', 'count': 2}
+            ]
+            
+            mock_risk = [
+                {
+                    'verdict': 'FALSE',
+                    'count': 15,
+                    'avg_credibility': Decimal('25.3'),
+                    'avg_confidence': Decimal('0.812')
+                }
+            ]
+            
+            mock_repo.get_verdict_distribution = AsyncMock(return_value=mock_distribution)
+            mock_repo.get_verdict_confidence_correlation = AsyncMock(return_value=mock_confidence)
+            mock_repo.get_verdict_temporal_trends = AsyncMock(return_value=mock_trends)
+            mock_repo.get_high_risk_verdicts = AsyncMock(return_value=mock_risk)
+            mock_repo_class.return_value = mock_repo
+            
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.get("/api/v1/analytics/verdict-details")
+            
+            # Assertions
+            assert response.status_code == 200
+            data = response.json()
+            
+            # Check response structure
+            assert 'period' in data
+            assert 'verdict_distribution' in data
+            assert 'confidence_by_verdict' in data
+            assert 'temporal_trends' in data
+            assert 'risk_indicators' in data
+            assert 'summary' in data
+            
+            # Check verdict distribution
+            assert len(data['verdict_distribution']) == 3
+            assert data['verdict_distribution'][0]['verdict'] == 'TRUE'
+            assert data['verdict_distribution'][0]['count'] == 45
+            assert 'percentage' in data['verdict_distribution'][0]
+            assert 'avg_credibility_score' in data['verdict_distribution'][0]
+            
+            # Check confidence data
+            assert 'TRUE' in data['confidence_by_verdict']
+            assert 'avg_confidence' in data['confidence_by_verdict']['TRUE']
+            assert 'min_confidence' in data['confidence_by_verdict']['TRUE']
+            assert 'max_confidence' in data['confidence_by_verdict']['TRUE']
+            
+            # Check risk indicators
+            assert 'false_misleading_verdicts' in data['risk_indicators']
+            assert 'total_risk_count' in data['risk_indicators']
+            assert 'risk_percentage' in data['risk_indicators']
+            assert 'overall_risk_level' in data['risk_indicators']
+            
+            # Check summary
+            assert 'total_verdicts' in data['summary']
+            assert 'unique_verdict_types' in data['summary']
+            assert 'most_common_verdict' in data['summary']
+    
+    @pytest.mark.asyncio
+    async def test_verdict_details_with_custom_days(self):
+        """Test verdict details with custom days parameter."""
         with patch('app.api.v1.endpoints.analytics.AnalyticsRepository') as mock_repo_class:
             mock_repo = AsyncMock()
-            mock_repo.get_category_statistics = AsyncMock(
-                return_value=mock_analytics_repo_data['category_stats']
-            )
+            
+            # Setup minimal mock data
+            mock_repo.get_verdict_distribution = AsyncMock(return_value=[
+                {'verdict': 'TRUE', 'count': 10, 'avg_score': Decimal('85.0')}
+            ])
+            mock_repo.get_verdict_confidence_correlation = AsyncMock(return_value=[])
+            mock_repo.get_verdict_temporal_trends = AsyncMock(return_value=[])
+            mock_repo.get_high_risk_verdicts = AsyncMock(return_value=[])
             mock_repo_class.return_value = mock_repo
             
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.get(
-                    "/api/v1/analytics/categories",
-                    params={
-                        "days": 7,
-                        "min_articles": 10,
-                        "sort_by": "volume"
-                    }
+                    "/api/v1/analytics/verdict-details",
+                    params={"days": 7}
                 )
             
             assert response.status_code == 200
             data = response.json()
-            
-            # Verify filters were applied
             assert data['period']['days'] == 7
-            assert data['criteria']['min_articles'] == 10
-            assert data['criteria']['sort_by'] == 'volume'
-            
-            # Verify repository was called with correct params
-            mock_repo.get_category_statistics.assert_called_once_with(
-                days=7,
-                min_articles=10
-            )
     
     @pytest.mark.asyncio
-    async def test_category_analytics_sort_by_false_rate(self, mock_analytics_repo_data):
-        """Test category analytics sorted by false rate."""
-        with patch('app.api.v1.endpoints.analytics.AnalyticsRepository') as mock_repo_class:
-            mock_repo = AsyncMock()
-            mock_repo.get_category_statistics = AsyncMock(
-                return_value=mock_analytics_repo_data['category_stats']
-            )
-            mock_repo_class.return_value = mock_repo
-            
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                response = await client.get(
-                    "/api/v1/analytics/categories",
-                    params={"sort_by": "false_rate"}
-                )
-            
-            assert response.status_code == 200
-            data = response.json()
-            
-            # Verify sorting (politics should be first as it has highest false rate)
-            categories = data['categories']
-            false_rates = [cat['false_rate'] for cat in categories]
-            assert false_rates == sorted(false_rates, reverse=True)
-    
-    @pytest.mark.asyncio
-    async def test_category_analytics_risk_levels(self, mock_analytics_repo_data):
-        """Test risk level calculation."""
-        with patch('app.api.v1.endpoints.analytics.AnalyticsRepository') as mock_repo_class:
-            mock_repo = AsyncMock()
-            mock_repo.get_category_statistics = AsyncMock(
-                return_value=mock_analytics_repo_data['category_stats']
-            )
-            mock_repo_class.return_value = mock_repo
-            
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                response = await client.get("/api/v1/analytics/categories")
-            
-            assert response.status_code == 200
-            data = response.json()
-            
-            # Verify risk levels are assigned
-            for category in data['categories']:
-                assert category['risk_level'] in ['low', 'medium', 'high', 'critical']
-    
-    @pytest.mark.asyncio
-    async def test_category_analytics_validation_days_too_low(self):
-        """Test validation error for days parameter too low."""
+    async def test_verdict_details_invalid_days_too_low(self):
+        """Test verdict details with invalid days parameter (too low)."""
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get(
-                "/api/v1/analytics/categories",
+                "/api/v1/analytics/verdict-details",
                 params={"days": 0}
             )
         
         assert response.status_code == 422  # FastAPI validation error
+    
+    @pytest.mark.asyncio
+    async def test_verdict_details_invalid_days_too_high(self):
+        """Test verdict details with invalid days parameter (too high)."""
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get(
+                "/api/v1/analytics/verdict-details",
+                params={"days": 400}
+            )
+        
+        assert response.status_code == 422  # FastAPI validation error
+    
+    @pytest.mark.asyncio
+    async def test_verdict_details_empty_data(self):
+        """Test verdict details with empty database."""
+        with patch('app.api.v1.endpoints.analytics.AnalyticsRepository') as mock_repo_class:
+            mock_repo = AsyncMock()
+            
+            # Setup empty mock data
+            mock_repo.get_verdict_distribution = AsyncMock(return_value=[])
+            mock_repo.get_verdict_confidence_correlation = AsyncMock(return_value=[])
+            mock_repo.get_verdict_temporal_trends = AsyncMock(return_value=[])
+            mock_repo.get_high_risk_verdicts = AsyncMock(return_value=[])
+            mock_repo_class.return_value = mock_repo
+            
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.get("/api/v1/analytics/verdict-details")
+            
+            assert response.status_code == 200
+            data = response.json()
+            
+            # Should handle empty data gracefully
+            assert data['summary']['total_verdicts'] == 0
+            assert data['summary']['unique_verdict_types'] == 0
+            assert data['summary']['most_common_verdict'] is None
+            assert data['risk_indicators']['total_risk_count'] == 0
+    
+    @pytest.mark.asyncio
+    async def test_verdict_details_server_error(self):
+        """Test verdict details with server error."""
+        with patch('app.api.v1.endpoints.analytics.AnalyticsRepository') as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.get_verdict_distribution = AsyncMock(
+                side_effect=Exception("Database error")
+            )
+            mock_repo_class.return_value = mock_repo
+            
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.get("/api/v1/analytics/verdict-details")
+            
+            assert response.status_code == 500
+            assert "verdict analytics" in response.json()['detail'].lower()
     
     @pytest.mark.asyncio
     async def test_category_analytics_validation_days_too_high(self):

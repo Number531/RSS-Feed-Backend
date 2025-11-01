@@ -198,6 +198,186 @@ class TestGetTemporalTrends:
             await analytics_service.get_temporal_trends(days=30, granularity='monthly')
         
         assert "Granularity must be one of" in str(exc_info.value)
+
+
+class TestGetVerdictAnalytics:
+    """Test get_verdict_analytics method."""
+    
+    @pytest.mark.asyncio
+    async def test_success_with_valid_params(
+        self,
+        analytics_service,
+        mock_analytics_repo
+    ):
+        """Test successful retrieval of verdict analytics."""
+        # Setup mock data
+        mock_distribution = [
+            {'verdict': 'TRUE', 'count': 50, 'avg_score': Decimal('85.5')},
+            {'verdict': 'FALSE', 'count': 20, 'avg_score': Decimal('25.0')},
+            {'verdict': 'MISLEADING', 'count': 10, 'avg_score': Decimal('40.5')}
+        ]
+        
+        mock_confidence = [
+            {
+                'verdict': 'TRUE',
+                'avg_confidence': Decimal('0.890'),
+                'min_confidence': Decimal('0.750'),
+                'max_confidence': Decimal('0.990'),
+                'count': 50
+            },
+            {
+                'verdict': 'FALSE',
+                'avg_confidence': Decimal('0.820'),
+                'min_confidence': Decimal('0.700'),
+                'max_confidence': Decimal('0.950'),
+                'count': 20
+            }
+        ]
+        
+        mock_trends = [
+            {'date': datetime.utcnow(), 'verdict': 'TRUE', 'count': 5},
+            {'date': datetime.utcnow(), 'verdict': 'FALSE', 'count': 2}
+        ]
+        
+        mock_risk = [
+            {
+                'verdict': 'FALSE',
+                'count': 20,
+                'avg_credibility': Decimal('25.0'),
+                'avg_confidence': Decimal('0.820')
+            }
+        ]
+        
+        # Setup mock returns
+        mock_analytics_repo.get_verdict_distribution.return_value = mock_distribution
+        mock_analytics_repo.get_verdict_confidence_correlation.return_value = mock_confidence
+        mock_analytics_repo.get_verdict_temporal_trends.return_value = mock_trends
+        mock_analytics_repo.get_high_risk_verdicts.return_value = mock_risk
+        
+        # Execute
+        result = await analytics_service.get_verdict_analytics(days=30)
+        
+        # Verify structure
+        assert 'period' in result
+        assert 'verdict_distribution' in result
+        assert 'confidence_by_verdict' in result
+        assert 'temporal_trends' in result
+        assert 'risk_indicators' in result
+        assert 'summary' in result
+        
+        # Verify distribution calculations
+        assert len(result['verdict_distribution']) == 3
+        assert result['verdict_distribution'][0]['verdict'] == 'TRUE'
+        assert result['verdict_distribution'][0]['count'] == 50
+        assert result['verdict_distribution'][0]['percentage'] == 62.5  # 50/80
+        
+        # Verify confidence data
+        assert 'TRUE' in result['confidence_by_verdict']
+        assert result['confidence_by_verdict']['TRUE']['avg_confidence'] == 0.890
+        
+        # Verify risk calculations
+        assert result['risk_indicators']['total_risk_count'] == 20
+        assert result['risk_indicators']['risk_percentage'] == 25.0  # 20/80
+        assert result['risk_indicators']['overall_risk_level'] == 'high'
+        
+        # Verify summary
+        assert result['summary']['total_verdicts'] == 80
+        assert result['summary']['unique_verdict_types'] == 3
+        assert result['summary']['most_common_verdict'] == 'TRUE'
+    
+    @pytest.mark.asyncio
+    async def test_invalid_days_too_low(self, analytics_service):
+        """Test ValidationError when days < 1."""
+        with pytest.raises(ValidationError) as exc_info:
+            await analytics_service.get_verdict_analytics(days=0)
+        
+        assert "Days parameter must be between 1 and 365" in str(exc_info.value)
+    
+    @pytest.mark.asyncio
+    async def test_invalid_days_too_high(self, analytics_service):
+        """Test ValidationError when days > 365."""
+        with pytest.raises(ValidationError) as exc_info:
+            await analytics_service.get_verdict_analytics(days=400)
+        
+        assert "Days parameter must be between 1 and 365" in str(exc_info.value)
+    
+    @pytest.mark.asyncio
+    async def test_empty_distribution(self, analytics_service, mock_analytics_repo):
+        """Test handling of empty verdict distribution."""
+        # Setup empty mock data
+        mock_analytics_repo.get_verdict_distribution.return_value = []
+        mock_analytics_repo.get_verdict_confidence_correlation.return_value = []
+        mock_analytics_repo.get_verdict_temporal_trends.return_value = []
+        mock_analytics_repo.get_high_risk_verdicts.return_value = []
+        
+        # Execute
+        result = await analytics_service.get_verdict_analytics(days=30)
+        
+        # Verify graceful handling
+        assert result['summary']['total_verdicts'] == 0
+        assert result['summary']['unique_verdict_types'] == 0
+        assert result['summary']['most_common_verdict'] is None
+        assert result['risk_indicators']['total_risk_count'] == 0
+    
+    @pytest.mark.asyncio
+    async def test_risk_level_critical(self, analytics_service, mock_analytics_repo):
+        """Test critical risk level calculation."""
+        # Setup data with 50% false/misleading (critical threshold >= 40%)
+        mock_distribution = [
+            {'verdict': 'TRUE', 'count': 50, 'avg_score': Decimal('85.5')},
+            {'verdict': 'FALSE', 'count': 50, 'avg_score': Decimal('25.0')}
+        ]
+        
+        mock_risk = [
+            {
+                'verdict': 'FALSE',
+                'count': 50,
+                'avg_credibility': Decimal('25.0'),
+                'avg_confidence': Decimal('0.820')
+            }
+        ]
+        
+        mock_analytics_repo.get_verdict_distribution.return_value = mock_distribution
+        mock_analytics_repo.get_verdict_confidence_correlation.return_value = []
+        mock_analytics_repo.get_verdict_temporal_trends.return_value = []
+        mock_analytics_repo.get_high_risk_verdicts.return_value = mock_risk
+        
+        # Execute
+        result = await analytics_service.get_verdict_analytics(days=30)
+        
+        # Verify critical risk level
+        assert result['risk_indicators']['risk_percentage'] == 50.0
+        assert result['risk_indicators']['overall_risk_level'] == 'critical'
+    
+    @pytest.mark.asyncio
+    async def test_risk_level_low(self, analytics_service, mock_analytics_repo):
+        """Test low risk level calculation."""
+        # Setup data with <15% false/misleading (low threshold)
+        mock_distribution = [
+            {'verdict': 'TRUE', 'count': 90, 'avg_score': Decimal('85.5')},
+            {'verdict': 'FALSE', 'count': 10, 'avg_score': Decimal('25.0')}
+        ]
+        
+        mock_risk = [
+            {
+                'verdict': 'FALSE',
+                'count': 10,
+                'avg_credibility': Decimal('25.0'),
+                'avg_confidence': Decimal('0.820')
+            }
+        ]
+        
+        mock_analytics_repo.get_verdict_distribution.return_value = mock_distribution
+        mock_analytics_repo.get_verdict_confidence_correlation.return_value = []
+        mock_analytics_repo.get_verdict_temporal_trends.return_value = []
+        mock_analytics_repo.get_high_risk_verdicts.return_value = mock_risk
+        
+        # Execute
+        result = await analytics_service.get_verdict_analytics(days=30)
+        
+        # Verify low risk level
+        assert result['risk_indicators']['risk_percentage'] == 10.0
+        assert result['risk_indicators']['overall_risk_level'] == 'low'
     
     @pytest.mark.asyncio
     async def test_hourly_granularity_with_too_many_days(self, analytics_service):

@@ -16,9 +16,10 @@ The Analytics API provides comprehensive insights into fact-checking activities,
 2. [Endpoints](#endpoints)
    - [Get Aggregate Statistics](#1-get-aggregate-statistics) ⭐ **Phase 2A**
    - [Get Category Analytics](#2-get-category-analytics) ⭐ **Phase 2A**
-   - [Get Source Reliability Statistics](#3-get-source-reliability-statistics)
-   - [Get Fact-Check Trends](#4-get-fact-check-trends)
-   - [Get Claims Analytics](#5-get-claims-analytics)
+   - [Get Verdict Details](#3-get-verdict-details) ⭐ **NEW**
+   - [Get Source Reliability Statistics](#4-get-source-reliability-statistics)
+   - [Get Fact-Check Trends](#5-get-fact-check-trends)
+   - [Get Claims Analytics](#6-get-claims-analytics)
 3. [Data Models](#data-models)
 4. [Error Responses](#error-responses)
 5. [Usage Examples](#usage-examples)
@@ -240,7 +241,164 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 
-### 3. Get Source Reliability Statistics
+### 3. Get Verdict Details
+
+⭐ **NEW**: Comprehensive verdict analytics with distribution, confidence correlation, temporal trends, and risk indicators.
+
+Retrieves in-depth analytics on fact-check verdicts, including distribution breakdowns, confidence levels by verdict type, daily temporal trends, and risk assessment for false/misleading content.
+
+#### Endpoint
+
+```http
+GET /api/v1/analytics/verdict-details
+```
+
+#### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `days` | integer | No | `30` | Time period for analysis (1-365 days) |
+
+#### Request Example
+
+```http
+GET /api/v1/analytics/verdict-details?days=30
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### Response
+
+**Status Code:** `200 OK`
+
+```json
+{
+  "period": {
+    "days": 30,
+    "start_date": "2025-10-01T00:00:00Z",
+    "end_date": "2025-10-31T00:00:00Z"
+  },
+  "verdict_distribution": [
+    {
+      "verdict": "TRUE",
+      "count": 45,
+      "percentage": 45.0,
+      "avg_credibility_score": 85.5
+    },
+    {
+      "verdict": "FALSE",
+      "count": 15,
+      "percentage": 15.0,
+      "avg_credibility_score": 25.3
+    },
+    {
+      "verdict": "MISLEADING",
+      "count": 10,
+      "percentage": 10.0,
+      "avg_credibility_score": 35.0
+    }
+  ],
+  "confidence_by_verdict": {
+    "TRUE": {
+      "avg_confidence": 0.892,
+      "min_confidence": 0.750,
+      "max_confidence": 0.990,
+      "sample_size": 45
+    },
+    "FALSE": {
+      "avg_confidence": 0.812,
+      "min_confidence": 0.700,
+      "max_confidence": 0.950,
+      "sample_size": 15
+    }
+  },
+  "temporal_trends": [
+    {
+      "date": "2025-10-30",
+      "verdicts": {
+        "TRUE": 5,
+        "FALSE": 2,
+        "MISLEADING": 1
+      }
+    }
+  ],
+  "risk_indicators": {
+    "false_misleading_verdicts": [
+      {
+        "verdict": "FALSE",
+        "count": 15,
+        "avg_credibility": 25.3,
+        "avg_confidence": 0.812
+      },
+      {
+        "verdict": "MISLEADING",
+        "count": 10,
+        "avg_credibility": 35.0,
+        "avg_confidence": 0.785
+      }
+    ],
+    "total_risk_count": 25,
+    "risk_percentage": 25.0,
+    "overall_risk_level": "high"
+  },
+  "summary": {
+    "total_verdicts": 100,
+    "unique_verdict_types": 5,
+    "most_common_verdict": "TRUE"
+  }
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `period.days` | integer | Time period analyzed |
+| `period.start_date` | string (ISO 8601) | Start of analysis period |
+| `period.end_date` | string (ISO 8601) | End of analysis period |
+| `verdict_distribution` | array | Breakdown of all verdicts with percentages |
+| `verdict_distribution[].verdict` | string | Verdict type (TRUE, FALSE, MISLEADING, etc.) |
+| `verdict_distribution[].count` | integer | Number of this verdict |
+| `verdict_distribution[].percentage` | decimal | Percentage of total verdicts |
+| `verdict_distribution[].avg_credibility_score` | decimal | Average credibility score for this verdict (0-100) |
+| `confidence_by_verdict` | object | Confidence statistics grouped by verdict |
+| `confidence_by_verdict.<verdict>.avg_confidence` | decimal | Average confidence level (0-1) |
+| `confidence_by_verdict.<verdict>.min_confidence` | decimal | Minimum confidence observed |
+| `confidence_by_verdict.<verdict>.max_confidence` | decimal | Maximum confidence observed |
+| `confidence_by_verdict.<verdict>.sample_size` | integer | Number of fact-checks |
+| `temporal_trends` | array | Daily verdict counts over time |
+| `temporal_trends[].date` | string (ISO date) | Date of data point |
+| `temporal_trends[].verdicts` | object | Verdict counts for this date |
+| `risk_indicators` | object | Risk analysis for false/misleading content |
+| `risk_indicators.false_misleading_verdicts` | array | Details of risky verdicts |
+| `risk_indicators.total_risk_count` | integer | Total false/misleading verdicts |
+| `risk_indicators.risk_percentage` | decimal | Percentage of risky content |
+| `risk_indicators.overall_risk_level` | string | Overall risk: `low`, `medium`, `high`, `critical` |
+| `summary.total_verdicts` | integer | Total number of verdicts analyzed |
+| `summary.unique_verdict_types` | integer | Number of distinct verdict types |
+| `summary.most_common_verdict` | string | Most frequently occurring verdict |
+
+#### Risk Level Thresholds
+
+| Risk Level | Criteria |
+|------------|----------|
+| `low` | False/misleading rate < 15% |
+| `medium` | False/misleading rate 15-24% |
+| `high` | False/misleading rate 25-39% |
+| `critical` | False/misleading rate ≥ 40% |
+
+#### Use Cases
+
+- **Content Quality Monitoring**: Track overall verdict distribution and identify trends
+- **Confidence Analysis**: Understand how confidence levels correlate with different verdicts
+- **Trend Detection**: Spot patterns in verdicts over time for early warning
+- **Risk Assessment**: Identify periods or patterns with high false/misleading content
+- **Performance Metrics**: Measure fact-checking accuracy and coverage
+- **Alert Systems**: Trigger warnings when risk levels exceed thresholds
+- **Data Visualization**: Power charts and graphs showing verdict breakdowns
+
+---
+
+### 4. Get Source Reliability Statistics
 
 Retrieves aggregated credibility metrics for RSS sources based on their fact-checked articles.
 

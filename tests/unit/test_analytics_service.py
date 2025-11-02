@@ -786,6 +786,125 @@ class TestGetAnalyticsSummary:
         assert 'verdict_distribution' in result
 
 
+class TestGetAggregateStats:
+    """Test get_aggregate_stats method."""
+    
+    @pytest.mark.asyncio
+    async def test_with_previous_month_data(
+        self,
+        analytics_service,
+        mock_analytics_repo
+    ):
+        """Test aggregate stats when previous month data exists."""
+        # Setup
+        mock_analytics_repo.get_aggregate_statistics.return_value = {
+            "lifetime": {
+                "total_fact_checks": 100,
+                "sources_monitored": 5,
+                "total_claims": 300,
+                "avg_credibility": Decimal('75.0')
+            },
+            "current_month": {
+                "articles_this_month": 20,
+                "avg_credibility_this_month": Decimal('80.0')
+            },
+            "previous_month": {
+                "articles_last_month": 15,
+                "avg_credibility_last_month": Decimal('70.0')
+            }
+        }
+        
+        # Execute
+        result = await analytics_service.get_aggregate_stats(
+            include_lifetime=True,
+            include_trends=True
+        )
+        
+        # Verify
+        assert "lifetime" in result
+        assert "this_month" in result
+        assert result["this_month"]["articles_fact_checked"] == 20
+        assert result["this_month"]["avg_credibility"] == 80.0
+        # Should have calculated percentage changes
+        assert "volume_change" in result["this_month"]
+        assert "%" in result["this_month"]["volume_change"]
+        assert "credibility_change" in result["this_month"]
+        assert "%" in result["this_month"]["credibility_change"]
+    
+    @pytest.mark.asyncio
+    async def test_without_previous_month_data(
+        self,
+        analytics_service,
+        mock_analytics_repo
+    ):
+        """Test aggregate stats when previous month data is missing (N/A fallback)."""
+        # Setup - no previous_month data
+        mock_analytics_repo.get_aggregate_statistics.return_value = {
+            "lifetime": {
+                "total_fact_checks": 10,
+                "sources_monitored": 1,
+                "total_claims": 30,
+                "avg_credibility": Decimal('67.5')
+            },
+            "current_month": {
+                "articles_this_month": 10,
+                "avg_credibility_this_month": Decimal('67.5')
+            }
+            # No previous_month key
+        }
+        
+        # Execute
+        result = await analytics_service.get_aggregate_stats(
+            include_lifetime=True,
+            include_trends=True
+        )
+        
+        # Verify
+        assert "this_month" in result
+        assert result["this_month"]["articles_fact_checked"] == 10
+        assert result["this_month"]["avg_credibility"] == 67.5
+        # Should have null fallback values
+        assert result["this_month"]["volume_change"] is None
+        assert result["this_month"]["credibility_change"] is None
+    
+    @pytest.mark.asyncio
+    async def test_without_trends(
+        self,
+        analytics_service,
+        mock_analytics_repo
+    ):
+        """Test aggregate stats when include_trends=False."""
+        # Setup
+        mock_analytics_repo.get_aggregate_statistics.return_value = {
+            "lifetime": {
+                "total_fact_checks": 50,
+                "sources_monitored": 3,
+                "total_claims": 150,
+                "avg_credibility": Decimal('72.0')
+            },
+            "current_month": {
+                "articles_this_month": 15,
+                "avg_credibility_this_month": Decimal('75.0')
+            },
+            "previous_month": {
+                "articles_last_month": 12,
+                "avg_credibility_last_month": Decimal('70.0')
+            }
+        }
+        
+        # Execute
+        result = await analytics_service.get_aggregate_stats(
+            include_lifetime=True,
+            include_trends=False
+        )
+        
+        # Verify
+        assert "this_month" in result
+        # Should NOT have volume_change or credibility_change
+        assert "volume_change" not in result["this_month"]
+        assert "credibility_change" not in result["this_month"]
+
+
 class TestErrorHandling:
     """Test error handling and edge cases."""
     

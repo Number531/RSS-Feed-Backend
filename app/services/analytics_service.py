@@ -5,6 +5,7 @@ Provides business logic for fact-check analytics including source reliability,
 temporal trends, claims statistics, and verdict distribution.
 """
 
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -324,21 +325,29 @@ class AnalyticsService(BaseService):
                 }
 
                 # Calculate trends if requested
-                if include_trends and stats.get("previous_month"):
-                    prev = stats["previous_month"]
-                    prev_count = int(prev.get("articles_last_month", 0))
-                    curr_count = int(current.get("articles_this_month", 0))
+                if include_trends:
+                    # Initialize with null fallback values
+                    response["this_month"]["volume_change"] = None
+                    response["this_month"]["credibility_change"] = None
+                    
+                    # Calculate actual values if previous month data exists
+                    if stats.get("previous_month"):
+                        prev = stats["previous_month"]
+                        prev_count = int(prev.get("articles_last_month", 0))
+                        curr_count = int(current.get("articles_this_month", 0))
 
-                    if prev_count > 0:
-                        volume_change = ((curr_count - prev_count) / prev_count) * 100
-                        response["this_month"]["volume_change"] = f"{volume_change:+.1f}%"
+                        # Calculate volume change with division by zero protection
+                        if prev_count > 0:
+                            volume_change = ((curr_count - prev_count) / prev_count) * 100
+                            response["this_month"]["volume_change"] = f"{volume_change:+.1f}%"
 
-                    prev_cred = float(prev.get("avg_credibility_last_month", 0) or 0)
-                    curr_cred = float(current.get("avg_credibility_this_month", 0) or 0)
+                        prev_cred = float(prev.get("avg_credibility_last_month", 0) or 0)
+                        curr_cred = float(current.get("avg_credibility_this_month", 0) or 0)
 
-                    if prev_cred > 0:
-                        cred_change = ((curr_cred - prev_cred) / prev_cred) * 100
-                        response["this_month"]["credibility_change"] = f"{cred_change:+.1f}%"
+                        # Calculate credibility change with division by zero protection
+                        if prev_cred > 0:
+                            cred_change = ((curr_cred - prev_cred) / prev_cred) * 100
+                            response["this_month"]["credibility_change"] = f"{cred_change:+.1f}%"
 
             # Generate milestones
             if include_lifetime and stats.get("lifetime"):
@@ -487,11 +496,13 @@ class AnalyticsService(BaseService):
             raise ValidationError("Days parameter must be between 1 and 365")
 
         try:
-            # Fetch all data sequentially to avoid session conflicts
-            distribution = await self.analytics_repo.get_verdict_distribution(days=days)
-            confidence_data = await self.analytics_repo.get_verdict_confidence_correlation(days=days)
-            trends_data = await self.analytics_repo.get_verdict_temporal_trends(days=days)
-            risk_verdicts = await self.analytics_repo.get_high_risk_verdicts(days=days)
+            # Fetch all data concurrently for better performance
+            distribution, confidence_data, trends_data, risk_verdicts = await asyncio.gather(
+                self.analytics_repo.get_verdict_distribution(days=days),
+                self.analytics_repo.get_verdict_confidence_correlation(days=days),
+                self.analytics_repo.get_verdict_temporal_trends(days=days),
+                self.analytics_repo.get_high_risk_verdicts(days=days),
+            )
 
             # Process verdict distribution with enriched data
             total_verdicts = sum(v.get("count", 0) for v in distribution)

@@ -15,6 +15,11 @@ from app.core.exceptions import ValidationError
 from app.db.session import get_db
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.services.analytics_service import AnalyticsService
+from app.schemas.analytics import (
+    AggregateStatsResponse,
+    CategoryAnalyticsResponse,
+    VerdictAnalyticsResponse,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -309,7 +314,7 @@ async def get_claims_analytics(
 
 @router.get(
     "/stats",
-    response_model=Dict[str, Any],
+    response_model=AggregateStatsResponse,
     summary="Get aggregate statistics",
     description="High-level statistics across all fact-check data including lifetime totals and monthly trends.",
 )
@@ -317,7 +322,7 @@ async def get_aggregate_statistics(
     include_lifetime: bool = Query(True, description="Include lifetime statistics"),
     include_trends: bool = Query(True, description="Include month-over-month trends"),
     db: AsyncSession = Depends(get_db),
-) -> Dict[str, Any]:
+) -> AggregateStatsResponse:
     """Get aggregate statistics."""
     try:
         analytics_repo = AnalyticsRepository(db)
@@ -337,7 +342,7 @@ async def get_aggregate_statistics(
 
 @router.get(
     "/categories",
-    response_model=Dict[str, Any],
+    response_model=CategoryAnalyticsResponse,
     summary="Get category analytics",
     description="Statistics aggregated by article category with risk levels and top sources.",
 )
@@ -346,7 +351,7 @@ async def get_category_analytics(
     min_articles: int = Query(5, ge=1, le=100, description="Minimum articles per category"),
     sort_by: str = Query("credibility", pattern="^(credibility|volume|false_rate)$"),
     db: AsyncSession = Depends(get_db),
-) -> Dict[str, Any]:
+) -> CategoryAnalyticsResponse:
     """Get category analytics."""
     try:
         analytics_repo = AnalyticsRepository(db)
@@ -366,7 +371,7 @@ async def get_category_analytics(
 
 @router.get(
     "/verdict-details",
-    response_model=Dict[str, Any],
+    response_model=VerdictAnalyticsResponse,
     summary="Get comprehensive verdict analytics",
     description="""
     Retrieve detailed verdict analytics including distribution, confidence correlations,
@@ -405,7 +410,7 @@ async def get_category_analytics(
 async def get_verdict_details(
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
     db: AsyncSession = Depends(get_db),
-) -> Dict[str, Any]:
+) -> VerdictAnalyticsResponse:
     """Get comprehensive verdict analytics."""
     try:
         analytics_repo = AnalyticsRepository(db)

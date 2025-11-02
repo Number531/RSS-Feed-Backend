@@ -496,13 +496,12 @@ class AnalyticsService(BaseService):
             raise ValidationError("Days parameter must be between 1 and 365")
 
         try:
-            # Fetch all data concurrently for better performance
-            distribution, confidence_data, trends_data, risk_verdicts = await asyncio.gather(
-                self.analytics_repo.get_verdict_distribution(days=days),
-                self.analytics_repo.get_verdict_confidence_correlation(days=days),
-                self.analytics_repo.get_verdict_temporal_trends(days=days),
-                self.analytics_repo.get_high_risk_verdicts(days=days),
-            )
+            # Fetch all data sequentially (SQLAlchemy async sessions don't support concurrent operations)
+            # Note: Cannot use asyncio.gather() here due to SQLAlchemy session limitation
+            distribution = await self.analytics_repo.get_verdict_distribution(days=days)
+            confidence_data = await self.analytics_repo.get_verdict_confidence_correlation(days=days)
+            trends_data = await self.analytics_repo.get_verdict_temporal_trends(days=days)
+            risk_verdicts = await self.analytics_repo.get_high_risk_verdicts(days=days)
 
             # Process verdict distribution with enriched data
             total_verdicts = sum(v.get("count", 0) for v in distribution)

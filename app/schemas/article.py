@@ -1,32 +1,36 @@
 """
 Article schemas for API validation.
 """
+
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ArticleBase(BaseModel):
     """Base article schema."""
+
     title: str = Field(..., min_length=1, max_length=500)
-    url: str = Field(..., pattern=r'^https?://')
+    url: str = Field(..., pattern=r"^https?://")
     description: Optional[str] = Field(None, max_length=1000)
     author: Optional[str] = Field(None, max_length=255)
     thumbnail_url: Optional[str] = Field(None, max_length=500)
     category: str = Field(..., pattern="^(general|politics|us|world|science)$")
-    
-    @field_validator('url')
+
+    @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
         """Validate URL format."""
-        if not v.startswith(('http://', 'https://')):
-            raise ValueError('URL must start with http:// or https://')
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("URL must start with http:// or https://")
         return v
 
 
 class ArticleCreate(ArticleBase):
     """Schema for creating articles (internal use)."""
+
     rss_source_id: UUID
     content: Optional[str] = None
     published_date: Optional[datetime] = None
@@ -35,6 +39,7 @@ class ArticleCreate(ArticleBase):
 
 class ArticleResponse(ArticleBase):
     """Schema for article response."""
+
     id: UUID
     rss_source_id: UUID
     published_date: Optional[datetime]
@@ -43,15 +48,16 @@ class ArticleResponse(ArticleBase):
     vote_count: int = 0  # Total vote count
     comment_count: int = 0
     tags: List[str] = []
-    
+
     # User interaction (if authenticated)
     user_vote: Optional[int] = None  # -1, 0, or 1
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
 class ArticleList(BaseModel):
     """Schema for paginated article list."""
+
     items: List[ArticleResponse]
     total: int
     page: int
@@ -61,6 +67,7 @@ class ArticleList(BaseModel):
 
 class ArticleFeed(BaseModel):
     """Schema for article feed query parameters."""
+
     category: Optional[str] = Field(None, pattern="^(general|politics|us|world|science)$")
     sort_by: str = Field("hot", pattern="^(hot|new|top)$")
     time_range: Optional[str] = Field(None, pattern="^(hour|day|week|month|year|all)$")

@@ -1,13 +1,15 @@
 """
 Main FastAPI application entry point.
 """
+
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.db.session import init_db, close_db
+from app.db.session import close_db, init_db
 
 
 @asynccontextmanager
@@ -17,16 +19,18 @@ async def lifespan(app: FastAPI):
     """
     # Setup structured logging
     from app.core.logging_config import setup_logging
+
     setup_logging()
-    
+
     # Startup
     print(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     print(f"📊 Environment: {settings.ENVIRONMENT}")
     print(f"🔍 Debug mode: {settings.DEBUG}")
-    
+
     # Initialize Sentry for error tracking
     if settings.SENTRY_DSN:
         import sentry_sdk
+
         sentry_sdk.init(
             dsn=settings.SENTRY_DSN,
             environment=settings.SENTRY_ENVIRONMENT or settings.ENVIRONMENT,
@@ -38,7 +42,7 @@ async def lifespan(app: FastAPI):
             release=f"{settings.APP_NAME}@{settings.APP_VERSION}",
         )
         print("✅ Sentry error tracking initialized")
-    
+
     # Validate production configuration
     try:
         settings.validate_production_config()
@@ -47,18 +51,19 @@ async def lifespan(app: FastAPI):
     except ValueError as e:
         print(f"❌ Configuration validation failed: {e}")
         raise
-    
+
     # Initialize database connection
     await init_db()
     print("✅ Database connection initialized")
-    
+
     # Initialize metrics endpoint
     from app.main import instrumentator
+
     instrumentator.expose(app, endpoint="/metrics", include_in_schema=False)
     print("✅ Metrics endpoint exposed at /metrics")
-    
+
     yield
-    
+
     # Shutdown
     print("🛑 Shutting down application...")
     await close_db()
@@ -93,6 +98,7 @@ instrumentator.instrument(app)
 
 # Add Request ID middleware (before CORS)
 from app.middleware.request_id import RequestIDMiddleware
+
 app.add_middleware(RequestIDMiddleware)
 
 # Configure CORS
@@ -120,16 +126,18 @@ async def root():
 async def health_check():
     """Health check endpoint with actual dependency testing."""
     from datetime import datetime, timezone
+
     from sqlalchemy import text
+
     from app.db.session import get_db
-    
+
     health_status = {
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "environment": settings.ENVIRONMENT,
         "version": settings.APP_VERSION,
     }
-    
+
     # Test database connectivity
     try:
         async for db in get_db():
@@ -139,11 +147,12 @@ async def health_check():
     except Exception as e:
         health_status["status"] = "unhealthy"
         health_status["database"] = f"error: {str(e)}"
-    
+
     # Test Redis connectivity (if configured)
     try:
         if settings.REDIS_URL:
             import redis.asyncio as redis
+
             redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
             await redis_client.ping()
             health_status["redis"] = "connected"
@@ -151,12 +160,16 @@ async def health_check():
     except Exception as e:
         health_status["redis"] = f"error: {str(e)}"
         # Redis is optional, don't mark as unhealthy
-    
+
     # Return appropriate status code
     from fastapi import status as http_status
     from fastapi.responses import JSONResponse
-    
-    status_code = http_status.HTTP_200_OK if health_status["status"] == "healthy" else http_status.HTTP_503_SERVICE_UNAVAILABLE
+
+    status_code = (
+        http_status.HTTP_200_OK
+        if health_status["status"] == "healthy"
+        else http_status.HTTP_503_SERVICE_UNAVAILABLE
+    )
     return JSONResponse(content=health_status, status_code=status_code)
 
 
@@ -172,7 +185,7 @@ async def api_root():
             "auth": f"{settings.API_V1_PREFIX}/auth",
             "users": f"{settings.API_V1_PREFIX}/users",
             "sources": f"{settings.API_V1_PREFIX}/sources",
-        }
+        },
     }
 
 
@@ -186,7 +199,7 @@ async def not_found_handler(request, exc):
             "error": "not_found",
             "message": "The requested resource was not found",
             "path": str(request.url.path),
-        }
+        },
     )
 
 
@@ -198,17 +211,19 @@ async def internal_error_handler(request, exc):
         content={
             "error": "internal_server_error",
             "message": "An internal server error occurred",
-        }
+        },
     )
 
 
 # Import and include API routers
 from app.api.v1.api import api_router
+
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",

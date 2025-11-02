@@ -1,24 +1,25 @@
 """Bookmark management endpoints."""
+
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
 from app.core.security import get_current_user
+from app.db.session import get_db
 from app.models.user import User
-from app.repositories.bookmark_repository import BookmarkRepository
 from app.repositories.article_repository import ArticleRepository
-from app.services.bookmark_service import BookmarkService
+from app.repositories.bookmark_repository import BookmarkRepository
 from app.schemas.bookmark import (
     BookmarkCreate,
-    BookmarkUpdate,
-    BookmarkResponse,
     BookmarkListResponse,
+    BookmarkResponse,
     BookmarkStatusResponse,
+    BookmarkUpdate,
     CollectionListResponse,
 )
+from app.services.bookmark_service import BookmarkService
 
 router = APIRouter()
 
@@ -72,7 +73,7 @@ async def list_bookmarks(
         page=page,
         page_size=page_size,
     )
-    
+
     return BookmarkListResponse(
         items=[BookmarkResponse.model_validate(b) for b in bookmarks],
         total=total,

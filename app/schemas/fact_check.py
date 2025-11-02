@@ -1,26 +1,30 @@
 """
 Fact-Check schemas for API responses.
 """
+
 from datetime import datetime
 from typing import Any, Dict, Optional
 from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 
 class FactCheckResponse(BaseModel):
     """Complete fact-check details for an article."""
-    
+
     # Basic info
     id: UUID
     article_id: UUID
     job_id: str
-    
+
     # Core results
     verdict: str = Field(..., description="Primary verdict (TRUE, FALSE, MISLEADING, etc.)")
     credibility_score: int = Field(..., ge=0, le=100, description="Credibility score 0-100")
-    confidence: Optional[float] = Field(None, ge=0.0, le=1.0, description="AI confidence level 0.0-1.0")
+    confidence: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="AI confidence level 0.0-1.0"
+    )
     summary: str = Field(..., description="Brief summary of fact-check findings")
-    
+
     # Claim statistics
     claims_analyzed: Optional[int] = Field(None, description="Total claims extracted")
     claims_validated: Optional[int] = Field(None, description="Claims that were validated")
@@ -28,24 +32,32 @@ class FactCheckResponse(BaseModel):
     claims_false: Optional[int] = Field(None, description="Claims verified as false")
     claims_misleading: Optional[int] = Field(None, description="Claims marked as misleading")
     claims_unverified: Optional[int] = Field(None, description="Claims that could not be verified")
-    
+
     # Full validation data (JSONB)
-    validation_results: Dict[str, Any] = Field(..., description="Complete API response with claims, evidence, references")
-    
+    validation_results: Dict[str, Any] = Field(
+        ..., description="Complete API response with claims, evidence, references"
+    )
+
     # Evidence quality
     num_sources: Optional[int] = Field(None, description="Number of sources consulted")
-    source_consensus: Optional[str] = Field(None, description="Source agreement level (STRONG_AGREEMENT, MIXED, etc.)")
-    
+    source_consensus: Optional[str] = Field(
+        None, description="Source agreement level (STRONG_AGREEMENT, MIXED, etc.)"
+    )
+
     # Processing metadata
-    validation_mode: Optional[str] = Field(None, description="Validation mode used (summary, standard, thorough)")
-    processing_time_seconds: Optional[int] = Field(None, description="Time taken to complete fact-check")
+    validation_mode: Optional[str] = Field(
+        None, description="Validation mode used (summary, standard, thorough)"
+    )
+    processing_time_seconds: Optional[int] = Field(
+        None, description="Time taken to complete fact-check"
+    )
     api_costs: Optional[Dict[str, Any]] = Field(None, description="API costs breakdown")
-    
+
     # Timestamps
     fact_checked_at: datetime = Field(..., description="When fact-check completed")
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -70,7 +82,7 @@ class FactCheckResponse(BaseModel):
                     "key_evidence": {
                         "supporting": ["Evidence 1", "Evidence 2"],
                         "contradicting": [],
-                        "context": ["Context 1"]
+                        "context": ["Context 1"],
                     },
                     "references": [
                         {
@@ -78,9 +90,9 @@ class FactCheckResponse(BaseModel):
                             "title": "Source Title",
                             "url": "https://example.com",
                             "source": "AP News",
-                            "credibility": "HIGH"
+                            "credibility": "HIGH",
                         }
-                    ]
+                    ],
                 },
                 "num_sources": 25,
                 "source_consensus": "STRONG_AGREEMENT",
@@ -89,6 +101,6 @@ class FactCheckResponse(BaseModel):
                 "api_costs": {"total": 0.008},
                 "fact_checked_at": "2025-10-19T14:22:54Z",
                 "created_at": "2025-10-19T14:22:55Z",
-                "updated_at": "2025-10-19T14:22:55Z"
+                "updated_at": "2025-10-19T14:22:55Z",
             }
         }

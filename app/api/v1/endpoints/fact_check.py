@@ -1,14 +1,16 @@
 """
 Fact-Check API endpoints.
 """
+
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.fact_check import ArticleFactCheck
 from app.schemas.fact_check import FactCheckResponse
-from sqlalchemy import select
 
 router = APIRouter()
 
@@ -57,7 +59,7 @@ router = APIRouter()
                             "key_evidence": {
                                 "supporting": ["Evidence 1", "Evidence 2"],
                                 "contradicting": [],
-                                "context": ["Context 1"]
+                                "context": ["Context 1"],
                             },
                             "references": [
                                 {
@@ -65,9 +67,9 @@ router = APIRouter()
                                     "title": "Source Title",
                                     "url": "https://example.com",
                                     "source": "AP News",
-                                    "credibility": "HIGH"
+                                    "credibility": "HIGH",
                                 }
-                            ]
+                            ],
                         },
                         "num_sources": 25,
                         "source_consensus": "STRONG_AGREEMENT",
@@ -76,10 +78,10 @@ router = APIRouter()
                         "api_costs": {"total": 0.008},
                         "fact_checked_at": "2025-10-19T14:22:54Z",
                         "created_at": "2025-10-19T14:22:55Z",
-                        "updated_at": "2025-10-19T14:22:55Z"
+                        "updated_at": "2025-10-19T14:22:55Z",
                     }
                 }
-            }
+            },
         },
         404: {
             "description": "Article or fact-check not found",
@@ -88,32 +90,31 @@ router = APIRouter()
                     "examples": {
                         "article_not_found": {
                             "summary": "Article doesn't exist",
-                            "value": {"detail": "Article not found"}
+                            "value": {"detail": "Article not found"},
                         },
                         "no_fact_check": {
                             "summary": "No fact-check available",
-                            "value": {"detail": "No fact-check found for this article"}
-                        }
+                            "value": {"detail": "No fact-check found for this article"},
+                        },
                     }
                 }
-            }
-        }
-    }
+            },
+        },
+    },
 )
 async def get_article_fact_check(
-    article_id: UUID,
-    db: AsyncSession = Depends(get_db)
+    article_id: UUID, db: AsyncSession = Depends(get_db)
 ) -> FactCheckResponse:
     """
     Get detailed fact-check information for an article.
-    
+
     Args:
         article_id: UUID of the article
         db: Database session
-        
+
     Returns:
         Complete fact-check details
-        
+
     Raises:
         HTTPException: 404 if article or fact-check not found
     """
@@ -122,11 +123,10 @@ async def get_article_fact_check(
         select(ArticleFactCheck).where(ArticleFactCheck.article_id == article_id)
     )
     fact_check = result.scalar_one_or_none()
-    
+
     if not fact_check:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No fact-check found for this article"
+            status_code=status.HTTP_404_NOT_FOUND, detail="No fact-check found for this article"
         )
-    
+
     return fact_check

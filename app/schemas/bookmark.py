@@ -1,30 +1,38 @@
 """Pydantic schemas for bookmarks."""
+
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.article import ArticleResponse
 
 
 class BookmarkCreate(BaseModel):
     """Schema for creating a bookmark."""
+
     article_id: UUID = Field(..., description="ID of the article to bookmark")
-    collection: Optional[str] = Field(None, max_length=100, description="Optional collection/folder name")
-    notes: Optional[str] = Field(None, max_length=1000, description="Optional notes about the bookmark")
+    collection: Optional[str] = Field(
+        None, max_length=100, description="Optional collection/folder name"
+    )
+    notes: Optional[str] = Field(
+        None, max_length=1000, description="Optional notes about the bookmark"
+    )
 
 
 class BookmarkUpdate(BaseModel):
     """Schema for updating a bookmark."""
+
     collection: Optional[str] = Field(None, max_length=100, description="Collection/folder name")
     notes: Optional[str] = Field(None, max_length=1000, description="Notes about the bookmark")
 
 
 class BookmarkResponse(BaseModel):
     """Schema for bookmark response."""
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     user_id: UUID
     article_id: UUID
@@ -36,6 +44,7 @@ class BookmarkResponse(BaseModel):
 
 class BookmarkListResponse(BaseModel):
     """Schema for paginated bookmark list."""
+
     items: list[BookmarkResponse]
     total: int
     page: int
@@ -45,11 +54,13 @@ class BookmarkListResponse(BaseModel):
 
 class BookmarkStatusResponse(BaseModel):
     """Schema for bookmark status check."""
+
     article_id: UUID
     is_bookmarked: bool
 
 
 class CollectionListResponse(BaseModel):
     """Schema for collections list."""
+
     collections: list[str]
     total: int

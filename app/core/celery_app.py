@@ -1,8 +1,10 @@
 """
 Celery application configuration for RSS feed tasks.
 """
+
 from celery import Celery
 from celery.schedules import crontab
+
 from app.core.config import settings
 
 # Create Celery app
@@ -10,7 +12,7 @@ celery_app = Celery(
     "rss_feed_worker",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.tasks.rss_tasks"]
+    include=["app.tasks.rss_tasks"],
 )
 
 # Celery configuration
@@ -32,8 +34,6 @@ celery_app.conf.beat_schedule = {
     "fetch-all-rss-feeds": {
         "task": "app.tasks.rss_tasks.fetch_all_feeds",
         "schedule": settings.CELERY_BEAT_SCHEDULE_INTERVAL,  # 900 seconds = 15 minutes
-        "options": {
-            "expires": 840  # Expire after 14 minutes if not executed
-        }
+        "options": {"expires": 840},  # Expire after 14 minutes if not executed
     },
 }

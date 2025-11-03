@@ -5,14 +5,13 @@ Provides dependency injection for repositories and services.
 Manages database sessions and service instantiation.
 """
 
-from typing import AsyncGenerator
-
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.repositories.article_repository import ArticleRepository
 from app.repositories.comment_repository import CommentRepository
+from app.repositories.fact_check_repository import FactCheckRepository
 from app.repositories.reading_history_repository import ReadingHistoryRepository
 from app.repositories.reading_preferences_repository import ReadingPreferencesRepository
 from app.repositories.user_repository import UserRepository
@@ -20,6 +19,7 @@ from app.repositories.vote_repository import VoteRepository
 from app.services.article_service import ArticleService
 from app.services.comment_service import CommentService
 from app.services.comment_vote_service import CommentVoteService
+from app.services.fact_check_service import FactCheckService
 from app.services.reading_history_service import ReadingHistoryService
 from app.services.user_service import UserService
 from app.services.vote_service import VoteService
@@ -105,6 +105,19 @@ def get_reading_preferences_repository(
         ReadingPreferencesRepository instance
     """
     return ReadingPreferencesRepository(db)
+
+
+def get_fact_check_repository(db: AsyncSession = Depends(get_db)) -> FactCheckRepository:
+    """
+    Get fact check repository instance.
+
+    Args:
+        db: Database session
+
+    Returns:
+        FactCheckRepository instance
+    """
+    return FactCheckRepository(db)
 
 
 # Service Dependencies
@@ -212,3 +225,20 @@ def get_reading_history_service(
         reading_preferences_repo=reading_preferences_repo,
         article_repo=article_repo,
     )
+
+
+def get_fact_check_service(
+    fact_check_repo: FactCheckRepository = Depends(get_fact_check_repository),
+    article_repo: ArticleRepository = Depends(get_article_repository),
+) -> FactCheckService:
+    """
+    Get fact check service instance.
+
+    Args:
+        fact_check_repo: Fact check repository
+        article_repo: Article repository
+
+    Returns:
+        FactCheckService instance
+    """
+    return FactCheckService(fact_check_repo, article_repo)

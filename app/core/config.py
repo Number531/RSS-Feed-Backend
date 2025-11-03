@@ -5,7 +5,7 @@ Loads settings from environment variables and .env file.
 
 from typing import List, Optional
 
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -42,8 +42,8 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str
-    DATABASE_POOL_SIZE: int = 20
-    DATABASE_MAX_OVERFLOW: int = 0
+    DATABASE_POOL_SIZE: int = 50
+    DATABASE_MAX_OVERFLOW: int = 10
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"

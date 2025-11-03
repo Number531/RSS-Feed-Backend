@@ -30,6 +30,8 @@ def event_loop():
 @pytest.fixture(scope="function")
 async def test_engine():
     """Create test database engine for each test."""
+    from sqlalchemy import text
+    
     engine = create_async_engine(
         TEST_DATABASE_URL,
         echo=False,
@@ -39,6 +41,12 @@ async def test_engine():
     
     # Create all tables
     async with engine.begin() as conn:
+        # Drop materialized views first (if they exist)
+        await conn.execute(text("DROP MATERIALIZED VIEW IF EXISTS analytics_category_summary CASCADE"))
+        await conn.execute(text("DROP MATERIALIZED VIEW IF EXISTS analytics_source_reliability CASCADE"))
+        await conn.execute(text("DROP MATERIALIZED VIEW IF EXISTS analytics_daily_summary CASCADE"))
+        
+        # Now drop and recreate tables
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     

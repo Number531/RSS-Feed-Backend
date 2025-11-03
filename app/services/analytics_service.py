@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 from app.core.exceptions import ValidationError
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.services.base_service import BaseService
+from app.utils.cache import cached_analytics
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,11 @@ class AnalyticsService(BaseService):
         super().__init__()
         self.analytics_repo = analytics_repo
 
+    @cached_analytics(
+        prefix='analytics:sources',
+        ttl=900,  # 15 minutes - aligns with RSS feed refresh
+        cache_key_params=['days', 'min_articles']
+    )
     async def get_source_reliability_stats(
         self, days: int = 30, min_articles: int = 5
     ) -> List[Dict[str, Any]]:
@@ -76,6 +82,11 @@ class AnalyticsService(BaseService):
             self.log_error("get_source_reliability_stats", e)
             raise
 
+    @cached_analytics(
+        prefix='analytics:trends',
+        ttl=900,  # 15 minutes
+        cache_key_params=['source_id', 'category', 'days', 'granularity']
+    )
     async def get_temporal_trends(
         self,
         source_id: Optional[str] = None,
@@ -284,6 +295,11 @@ class AnalyticsService(BaseService):
 
     # === Phase 2A Methods ===
 
+    @cached_analytics(
+        prefix='analytics:aggregate',
+        ttl=900,  # 15 minutes
+        cache_key_params=['include_lifetime', 'include_trends']
+    )
     async def get_aggregate_stats(
         self, include_lifetime: bool = True, include_trends: bool = True
     ) -> Dict[str, Any]:
@@ -377,6 +393,11 @@ class AnalyticsService(BaseService):
             self.log_error("get_aggregate_stats", e)
             raise
 
+    @cached_analytics(
+        prefix='analytics:categories',
+        ttl=900,  # 15 minutes
+        cache_key_params=['days', 'min_articles', 'sort_by']
+    )
     async def get_category_analytics(
         self, days: int = 30, min_articles: int = 5, sort_by: str = "credibility"
     ) -> Dict[str, Any]:
@@ -475,6 +496,11 @@ class AnalyticsService(BaseService):
             self.log_error("get_category_analytics", e)
             raise
 
+    @cached_analytics(
+        prefix='analytics:verdicts',
+        ttl=900,  # 15 minutes
+        cache_key_params=['days']
+    )
     async def get_verdict_analytics(self, days: int = 30) -> Dict[str, Any]:
         """
         Get comprehensive verdict analytics including distribution, confidence,

@@ -12,7 +12,7 @@ celery_app = Celery(
     "rss_feed_worker",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.tasks.rss_tasks"],
+    include=["app.tasks.rss_tasks", "app.tasks.cache_tasks"],
 )
 
 # Celery configuration
@@ -29,10 +29,15 @@ celery_app.conf.update(
     worker_max_tasks_per_child=50,  # Restart worker after 50 tasks
 )
 
-# Celery Beat schedule - RSS feed fetching every 15 minutes
+# Celery Beat schedule - RSS feed fetching and cache invalidation every 15 minutes
 celery_app.conf.beat_schedule = {
     "fetch-all-rss-feeds": {
         "task": "app.tasks.rss_tasks.fetch_all_feeds",
+        "schedule": settings.CELERY_BEAT_SCHEDULE_INTERVAL,  # 900 seconds = 15 minutes
+        "options": {"expires": 840},  # Expire after 14 minutes if not executed
+    },
+    "clear-analytics-cache": {
+        "task": "clear_analytics_cache",
         "schedule": settings.CELERY_BEAT_SCHEDULE_INTERVAL,  # 900 seconds = 15 minutes
         "options": {"expires": 840},  # Expire after 14 minutes if not executed
     },

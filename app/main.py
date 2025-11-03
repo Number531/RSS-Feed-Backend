@@ -56,6 +56,12 @@ async def lifespan(app: FastAPI):
     await init_db()
     print("✅ Database connection initialized")
 
+    # Initialize cache manager
+    from app.utils.cache import cache_manager
+
+    await cache_manager.connect()
+    print("✅ Cache manager initialized")
+
     # Initialize metrics endpoint
     from app.main import instrumentator
 
@@ -66,6 +72,8 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     print("🛑 Shutting down application...")
+    await cache_manager.disconnect()
+    print("✅ Cache manager disconnected")
     await close_db()
     print("✅ Database connection closed")
 

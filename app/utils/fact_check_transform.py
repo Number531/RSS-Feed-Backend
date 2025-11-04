@@ -186,10 +186,38 @@ def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> 
     claims_analyzed = api_result.get("claims_analyzed", len(validation_results))
     claims_validated = api_result.get("claims_validated", len(validation_results))
 
-    # Get source info
-    num_sources = primary_result.get("num_sources", 0)
-    source_analysis = validation_output.get("source_analysis", {})
-    source_consensus = source_analysis.get("source_consensus")
+    # Get source info - aggregate from all validation results
+    num_sources = 0
+    source_breakdown = {"news": 0, "general": 0, "research": 0, "historical": 0}
+
+    for result in validation_results:
+        result_validation = result.get("validation_result", result.get("validation_output", {}))
+
+        # Get evidence count from this claim
+        evidence_count = result_validation.get("evidence_count", 0)
+        num_sources += evidence_count
+
+        # Aggregate evidence breakdown
+        evidence_breakdown = result_validation.get("evidence_breakdown", {})
+        for source_type, count in evidence_breakdown.items():
+            if source_type in source_breakdown:
+                source_breakdown[source_type] += count
+
+    # Calculate source consensus based on breakdown
+    if num_sources > 0:
+        # Consensus is the dominant source type
+        max_type = max(source_breakdown, key=source_breakdown.get)
+        max_count = source_breakdown[max_type]
+        consensus_percentage = (max_count / num_sources) * 100
+
+        if consensus_percentage >= 60:
+            source_consensus = f"STRONG_{max_type.upper()}"  # e.g., "STRONG_NEWS"
+        elif consensus_percentage >= 40:
+            source_consensus = f"MODERATE_{max_type.upper()}"  # e.g., "MODERATE_NEWS"
+        else:
+            source_consensus = "MIXED"  # No dominant type
+    else:
+        source_consensus = None
 
     # Get processing metadata
     job_id = api_result.get("job_id", "unknown")

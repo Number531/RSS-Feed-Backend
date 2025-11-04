@@ -155,6 +155,9 @@ def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> 
             "validation_results": {"error": "No validation results"},
             "num_sources": 0,
             "source_consensus": None,
+            "source_breakdown": {},
+            "primary_source_type": None,
+            "source_diversity_score": None,
             "job_id": api_result.get("job_id", "unknown"),
             "validation_mode": api_result.get("validation_mode", "summary"),
             "processing_time_seconds": int(api_result.get("processing_time_seconds", 0)),
@@ -203,7 +206,7 @@ def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> 
             if source_type in source_breakdown:
                 source_breakdown[source_type] += count
 
-    # Calculate source consensus based on breakdown
+    # Calculate source consensus and materialized fields based on breakdown
     if num_sources > 0:
         # Consensus is the dominant source type
         max_type = max(source_breakdown, key=source_breakdown.get)
@@ -216,8 +219,28 @@ def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> 
             source_consensus = f"MODERATE_{max_type.upper()}"  # e.g., "MODERATE_NEWS"
         else:
             source_consensus = "MIXED"  # No dominant type
+
+        # Materialized fields for fast queries
+        primary_source_type = max_type  # "news", "research", etc.
+
+        # Calculate diversity score (0.0 = single type, 1.0 = perfectly balanced)
+        # Using Shannon entropy normalized to 0-1 range
+        total_types = sum(1 for count in source_breakdown.values() if count > 0)
+        if total_types > 1:
+            from math import log
+
+            entropy = 0.0
+            for count in source_breakdown.values():
+                if count > 0:
+                    proportion = count / num_sources
+                    entropy -= proportion * log(proportion, total_types)
+            source_diversity_score = round(entropy, 2)  # 0.0 to 1.0
+        else:
+            source_diversity_score = 0.0  # Single source type
     else:
         source_consensus = None
+        primary_source_type = None
+        source_diversity_score = None
 
     # Get processing metadata
     job_id = api_result.get("job_id", "unknown")
@@ -253,6 +276,9 @@ def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> 
         "validation_results": validation_results,  # Store complete array
         "num_sources": num_sources,
         "source_consensus": source_consensus,
+        "source_breakdown": source_breakdown,  # NEW: JSONB breakdown by type
+        "primary_source_type": primary_source_type,  # NEW: Materialized dominant type
+        "source_diversity_score": source_diversity_score,  # NEW: Diversity metric
         "job_id": job_id,
         "validation_mode": validation_mode,
         "processing_time_seconds": processing_time,

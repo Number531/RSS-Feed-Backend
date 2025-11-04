@@ -48,7 +48,10 @@ class ArticleFactCheck(Base):
 
     # Evidence quality metrics
     num_sources = Column(Integer, nullable=True)
-    source_consensus = Column(String(20), nullable=True)
+    source_consensus = Column(String(50), nullable=True)  # Increased from 20 to 50
+    source_breakdown = Column(JSONB, nullable=True)  # NEW: Breakdown by source type
+    primary_source_type = Column(String(20), nullable=True)  # NEW: Dominant source type
+    source_diversity_score = Column(DECIMAL(3, 2), nullable=True)  # NEW: 0.0-1.0 diversity
 
     # Processing metadata
     job_id = Column(String(255), nullable=False, unique=True, index=True)

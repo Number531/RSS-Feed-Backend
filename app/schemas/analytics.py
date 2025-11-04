@@ -366,3 +366,158 @@ class VerdictAnalyticsResponse(BaseModel):
                 },
             }
         }
+
+
+# === New Risk & Source Quality Endpoints ===
+
+
+class HighRiskArticleItem(BaseModel):
+    """Individual high-risk article summary."""
+
+    id: str = Field(..., description="Article UUID")
+    title: str = Field(..., description="Article title")
+    high_risk_claims_count: int = Field(..., description="Number of HIGH risk claims")
+    credibility_score: int = Field(..., description="Credibility score (0-100)")
+    verdict: str = Field(..., description="Fact-check verdict")
+    published_at: datetime = Field(..., description="Publication timestamp")
+    source_name: Optional[str] = Field(None, description="RSS source name")
+
+
+class HighRiskArticlesResponse(BaseModel):
+    """Response for GET /articles/high-risk endpoint."""
+
+    total: int = Field(..., description="Total high-risk articles")
+    articles: List[HighRiskArticleItem] = Field(..., description="List of high-risk articles")
+    filters: Dict[str, Any] = Field(..., description="Applied filters")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "total": 8,
+                "articles": [
+                    {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "title": "Breaking: Major political development",
+                        "high_risk_claims_count": 3,
+                        "credibility_score": 80,
+                        "verdict": "TRUE",
+                        "published_at": "2025-11-04T12:00:00Z",
+                        "source_name": "Fox News Politics",
+                    }
+                ],
+                "filters": {"min_risk_count": 1, "sort": "risk_desc"},
+            }
+        }
+
+
+class SourceBreakdownResponse(BaseModel):
+    """Response for GET /articles/{id}/source-breakdown endpoint."""
+
+    article_id: str = Field(..., description="Article UUID")
+    total_sources: int = Field(..., description="Total evidence sources used")
+    breakdown: Dict[str, int] = Field(..., description="Sources by type")
+    primary_source_type: Optional[str] = Field(None, description="Dominant source type")
+    diversity_score: Optional[float] = Field(
+        None, description="Source diversity score (0.0-1.0)"
+    )
+    source_consensus: Optional[str] = Field(
+        None, description="Source consensus classification"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "article_id": "550e8400-e29b-41d4-a716-446655440000",
+                "total_sources": 105,
+                "breakdown": {"news": 30, "general": 30, "research": 30, "historical": 15},
+                "primary_source_type": "news",
+                "diversity_score": 0.98,
+                "source_consensus": "MIXED",
+            }
+        }
+
+
+class SourceTypeQuality(BaseModel):
+    """Quality metrics for a source type."""
+
+    type: str = Field(..., description="Source type (news/research/general/historical)")
+    article_count: int = Field(..., description="Number of articles")
+    avg_diversity: float = Field(..., description="Average diversity score")
+    avg_credibility: float = Field(..., description="Average credibility score")
+    avg_sources: float = Field(..., description="Average number of sources")
+
+
+class SourceQualityResponse(BaseModel):
+    """Response for GET /analytics/source-quality endpoint."""
+
+    by_source_type: List[SourceTypeQuality] = Field(
+        ..., description="Metrics by source type"
+    )
+    overall: Dict[str, Any] = Field(..., description="Overall statistics")
+    period: Dict[str, Any] = Field(..., description="Analysis period")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "by_source_type": [
+                    {
+                        "type": "news",
+                        "article_count": 8,
+                        "avg_diversity": 0.98,
+                        "avg_credibility": 80.8,
+                        "avg_sources": 105.0,
+                    }
+                ],
+                "overall": {
+                    "avg_diversity": 0.98,
+                    "most_common_type": "news",
+                    "highly_diverse_articles": 8,
+                },
+                "period": {"days": 30},
+            }
+        }
+
+
+class RiskCategory(BaseModel):
+    """Risk category statistics."""
+
+    category: str = Field(..., description="Risk category (low/medium/high)")
+    article_count: int = Field(..., description="Number of articles")
+    avg_credibility: float = Field(..., description="Average credibility score")
+    verdict_distribution: Dict[str, int] = Field(
+        ..., description="Verdict distribution"
+    )
+
+
+class RiskCorrelationResponse(BaseModel):
+    """Response for GET /analytics/risk-correlation endpoint."""
+
+    risk_categories: List[RiskCategory] = Field(..., description="Categories breakdown")
+    insights: Dict[str, Any] = Field(..., description="Analysis insights")
+    period: Dict[str, Any] = Field(..., description="Analysis period")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "risk_categories": [
+                    {
+                        "category": "high_risk",
+                        "article_count": 8,
+                        "avg_credibility": 80.8,
+                        "verdict_distribution": {"TRUE": 7, "FALSE": 1},
+                    },
+                    {
+                        "category": "low_risk",
+                        "article_count": 2,
+                        "avg_credibility": 0.0,
+                        "verdict_distribution": {},
+                    },
+                ],
+                "insights": {
+                    "high_risk_can_be_true": True,
+                    "correlation": "weak",
+                    "notes": "High-risk claims don't necessarily indicate false information",
+                },
+                "period": {"days": 30},
+            }
+        }

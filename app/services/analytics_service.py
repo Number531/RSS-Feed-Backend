@@ -41,9 +41,9 @@ class AnalyticsService(BaseService):
         self.analytics_repo = analytics_repo
 
     @cached_analytics(
-        prefix='analytics:sources',
+        prefix="analytics:sources",
         ttl=900,  # 15 minutes - aligns with RSS feed refresh
-        cache_key_params=['days', 'min_articles']
+        cache_key_params=["days", "min_articles"],
     )
     async def get_source_reliability_stats(
         self, days: int = 30, min_articles: int = 5
@@ -61,7 +61,9 @@ class AnalyticsService(BaseService):
         Raises:
             ValidationError: If parameters are invalid
         """
-        self.log_operation("get_source_reliability_stats", days=days, min_articles=min_articles)
+        self.log_operation(
+            "get_source_reliability_stats", days=days, min_articles=min_articles
+        )
 
         # Validate parameters
         if days < 1 or days > 365:
@@ -75,7 +77,9 @@ class AnalyticsService(BaseService):
                 days=days, min_articles=min_articles
             )
 
-            logger.info(f"Retrieved {len(stats)} source reliability stats for {days} days")
+            logger.info(
+                f"Retrieved {len(stats)} source reliability stats for {days} days"
+            )
             return stats
 
         except Exception as e:
@@ -83,9 +87,9 @@ class AnalyticsService(BaseService):
             raise
 
     @cached_analytics(
-        prefix='analytics:trends',
+        prefix="analytics:trends",
         ttl=900,  # 15 minutes
-        cache_key_params=['source_id', 'category', 'days', 'granularity']
+        cache_key_params=["source_id", "category", "days", "granularity"],
     )
     async def get_temporal_trends(
         self,
@@ -123,15 +127,22 @@ class AnalyticsService(BaseService):
 
         valid_granularities = {"hourly", "daily", "weekly"}
         if granularity not in valid_granularities:
-            raise ValidationError(f"Granularity must be one of: {', '.join(valid_granularities)}")
+            raise ValidationError(
+                f"Granularity must be one of: {', '.join(valid_granularities)}"
+            )
 
         # Validate granularity makes sense for time period
         if granularity == "hourly" and days > 7:
-            raise ValidationError("Hourly granularity is only supported for up to 7 days")
+            raise ValidationError(
+                "Hourly granularity is only supported for up to 7 days"
+            )
 
         try:
             trends = await self.analytics_repo.get_temporal_trends(
-                source_id=source_id, category=category, days=days, granularity=granularity
+                source_id=source_id,
+                category=category,
+                days=days,
+                granularity=granularity,
             )
 
             logger.info(
@@ -177,11 +188,15 @@ class AnalyticsService(BaseService):
                 "UNVERIFIED",
             }
             if verdict.upper() not in valid_verdicts:
-                raise ValidationError(f"Verdict must be one of: {', '.join(valid_verdicts)}")
+                raise ValidationError(
+                    f"Verdict must be one of: {', '.join(valid_verdicts)}"
+                )
             verdict = verdict.upper()
 
         try:
-            stats = await self.analytics_repo.get_claims_statistics(verdict=verdict, days=days)
+            stats = await self.analytics_repo.get_claims_statistics(
+                verdict=verdict, days=days
+            )
 
             # Handle empty result
             if not stats:
@@ -198,7 +213,8 @@ class AnalyticsService(BaseService):
                 }
 
             logger.info(
-                f"Retrieved claims statistics: " f"{stats.get('total_fact_checks', 0)} fact-checks"
+                f"Retrieved claims statistics: "
+                f"{stats.get('total_fact_checks', 0)} fact-checks"
             )
             return stats
 
@@ -269,7 +285,10 @@ class AnalyticsService(BaseService):
             verdict_dist_task = self.get_verdict_distribution(days=days)
 
             source_stats, claims_stats, verdict_dist = await asyncio.gather(
-                source_stats_task, claims_stats_task, verdict_dist_task, return_exceptions=False
+                source_stats_task,
+                claims_stats_task,
+                verdict_dist_task,
+                return_exceptions=False,
             )
 
             summary = {
@@ -296,9 +315,9 @@ class AnalyticsService(BaseService):
     # === Phase 2A Methods ===
 
     @cached_analytics(
-        prefix='analytics:aggregate',
+        prefix="analytics:aggregate",
         ttl=900,  # 15 minutes
-        cache_key_params=['include_lifetime', 'include_trends']
+        cache_key_params=["include_lifetime", "include_trends"],
     )
     async def get_aggregate_stats(
         self, include_lifetime: bool = True, include_trends: bool = True
@@ -314,7 +333,9 @@ class AnalyticsService(BaseService):
             Dictionary with aggregate statistics
         """
         self.log_operation(
-            "get_aggregate_stats", include_lifetime=include_lifetime, include_trends=include_trends
+            "get_aggregate_stats",
+            include_lifetime=include_lifetime,
+            include_trends=include_trends,
         )
 
         try:
@@ -329,7 +350,9 @@ class AnalyticsService(BaseService):
                     "articles_fact_checked": int(lifetime.get("total_fact_checks", 0)),
                     "sources_monitored": int(lifetime.get("sources_monitored", 0)),
                     "claims_verified": int(lifetime.get("total_claims", 0) or 0),
-                    "overall_credibility": float(lifetime.get("avg_credibility", 0) or 0),
+                    "overall_credibility": float(
+                        lifetime.get("avg_credibility", 0) or 0
+                    ),
                 }
 
             # Current month statistics
@@ -337,7 +360,9 @@ class AnalyticsService(BaseService):
                 current = stats["current_month"]
                 response["this_month"] = {
                     "articles_fact_checked": int(current.get("articles_this_month", 0)),
-                    "avg_credibility": float(current.get("avg_credibility_this_month", 0) or 0),
+                    "avg_credibility": float(
+                        current.get("avg_credibility_this_month", 0) or 0
+                    ),
                 }
 
                 # Calculate trends if requested
@@ -345,7 +370,7 @@ class AnalyticsService(BaseService):
                     # Initialize with null fallback values
                     response["this_month"]["volume_change"] = None
                     response["this_month"]["credibility_change"] = None
-                    
+
                     # Calculate actual values if previous month data exists
                     if stats.get("previous_month"):
                         prev = stats["previous_month"]
@@ -354,16 +379,26 @@ class AnalyticsService(BaseService):
 
                         # Calculate volume change with division by zero protection
                         if prev_count > 0:
-                            volume_change = ((curr_count - prev_count) / prev_count) * 100
-                            response["this_month"]["volume_change"] = f"{volume_change:+.1f}%"
+                            volume_change = (
+                                (curr_count - prev_count) / prev_count
+                            ) * 100
+                            response["this_month"][
+                                "volume_change"
+                            ] = f"{volume_change:+.1f}%"
 
-                        prev_cred = float(prev.get("avg_credibility_last_month", 0) or 0)
-                        curr_cred = float(current.get("avg_credibility_this_month", 0) or 0)
+                        prev_cred = float(
+                            prev.get("avg_credibility_last_month", 0) or 0
+                        )
+                        curr_cred = float(
+                            current.get("avg_credibility_this_month", 0) or 0
+                        )
 
                         # Calculate credibility change with division by zero protection
                         if prev_cred > 0:
                             cred_change = ((curr_cred - prev_cred) / prev_cred) * 100
-                            response["this_month"]["credibility_change"] = f"{cred_change:+.1f}%"
+                            response["this_month"][
+                                "credibility_change"
+                            ] = f"{cred_change:+.1f}%"
 
             # Generate milestones
             if include_lifetime and stats.get("lifetime"):
@@ -394,9 +429,9 @@ class AnalyticsService(BaseService):
             raise
 
     @cached_analytics(
-        prefix='analytics:categories',
+        prefix="analytics:categories",
         ttl=900,  # 15 minutes
-        cache_key_params=['days', 'min_articles', 'sort_by']
+        cache_key_params=["days", "min_articles", "sort_by"],
     )
     async def get_category_analytics(
         self, days: int = 30, min_articles: int = 5, sort_by: str = "credibility"
@@ -416,7 +451,10 @@ class AnalyticsService(BaseService):
             ValidationError: If parameters are invalid
         """
         self.log_operation(
-            "get_category_analytics", days=days, min_articles=min_articles, sort_by=sort_by
+            "get_category_analytics",
+            days=days,
+            min_articles=min_articles,
+            sort_by=sort_by,
         )
 
         # Validate parameters
@@ -428,7 +466,9 @@ class AnalyticsService(BaseService):
 
         valid_sort_fields = {"credibility", "volume", "false_rate"}
         if sort_by not in valid_sort_fields:
-            raise ValidationError(f"sort_by must be one of: {', '.join(valid_sort_fields)}")
+            raise ValidationError(
+                f"sort_by must be one of: {', '.join(valid_sort_fields)}"
+            )
 
         try:
             categories = await self.analytics_repo.get_category_statistics(
@@ -473,7 +513,9 @@ class AnalyticsService(BaseService):
 
             # Apply sorting
             if sort_by == "volume":
-                enriched_categories.sort(key=lambda x: x["articles_count"], reverse=True)
+                enriched_categories.sort(
+                    key=lambda x: x["articles_count"], reverse=True
+                )
             elif sort_by == "false_rate":
                 enriched_categories.sort(key=lambda x: x["false_rate"], reverse=True)
             # 'credibility' is already sorted by default from repository
@@ -483,13 +525,17 @@ class AnalyticsService(BaseService):
                 "total_categories": len(enriched_categories),
                 "period": {
                     "days": days,
-                    "start_date": (datetime.utcnow() - timedelta(days=days)).isoformat(),
+                    "start_date": (
+                        datetime.utcnow() - timedelta(days=days)
+                    ).isoformat(),
                     "end_date": datetime.utcnow().isoformat(),
                 },
                 "criteria": {"min_articles": min_articles, "sort_by": sort_by},
             }
 
-            logger.info(f"Retrieved {len(enriched_categories)} category analytics for {days} days")
+            logger.info(
+                f"Retrieved {len(enriched_categories)} category analytics for {days} days"
+            )
             return response
 
         except Exception as e:
@@ -497,9 +543,7 @@ class AnalyticsService(BaseService):
             raise
 
     @cached_analytics(
-        prefix='analytics:verdicts',
-        ttl=900,  # 15 minutes
-        cache_key_params=['days']
+        prefix="analytics:verdicts", ttl=900, cache_key_params=["days"]  # 15 minutes
     )
     async def get_verdict_analytics(self, days: int = 30) -> Dict[str, Any]:
         """
@@ -525,8 +569,12 @@ class AnalyticsService(BaseService):
             # Fetch all data sequentially (SQLAlchemy async sessions don't support concurrent operations)
             # Note: Cannot use asyncio.gather() here due to SQLAlchemy session limitation
             distribution = await self.analytics_repo.get_verdict_distribution(days=days)
-            confidence_data = await self.analytics_repo.get_verdict_confidence_correlation(days=days)
-            trends_data = await self.analytics_repo.get_verdict_temporal_trends(days=days)
+            confidence_data = (
+                await self.analytics_repo.get_verdict_confidence_correlation(days=days)
+            )
+            trends_data = await self.analytics_repo.get_verdict_temporal_trends(
+                days=days
+            )
             risk_verdicts = await self.analytics_repo.get_high_risk_verdicts(days=days)
 
             # Process verdict distribution with enriched data
@@ -535,14 +583,18 @@ class AnalyticsService(BaseService):
 
             for verdict in distribution:
                 count = int(verdict.get("count", 0))
-                percentage = (count / total_verdicts * 100) if total_verdicts > 0 else 0.0
+                percentage = (
+                    (count / total_verdicts * 100) if total_verdicts > 0 else 0.0
+                )
 
                 enriched_distribution.append(
                     {
                         "verdict": verdict.get("verdict"),
                         "count": count,
                         "percentage": round(percentage, 2),
-                        "avg_credibility_score": round(float(verdict.get("avg_score", 0) or 0), 1),
+                        "avg_credibility_score": round(
+                            float(verdict.get("avg_score", 0) or 0), 1
+                        ),
                     }
                 )
 
@@ -551,9 +603,15 @@ class AnalyticsService(BaseService):
             for conf in confidence_data:
                 verdict = conf.get("verdict")
                 confidence_by_verdict[verdict] = {
-                    "avg_confidence": round(float(conf.get("avg_confidence", 0) or 0), 3),
-                    "min_confidence": round(float(conf.get("min_confidence", 0) or 0), 3),
-                    "max_confidence": round(float(conf.get("max_confidence", 0) or 0), 3),
+                    "avg_confidence": round(
+                        float(conf.get("avg_confidence", 0) or 0), 3
+                    ),
+                    "min_confidence": round(
+                        float(conf.get("min_confidence", 0) or 0), 3
+                    ),
+                    "max_confidence": round(
+                        float(conf.get("max_confidence", 0) or 0), 3
+                    ),
                     "sample_size": int(conf.get("count", 0)),
                 }
 
@@ -586,15 +644,21 @@ class AnalyticsService(BaseService):
                     {
                         "verdict": risk.get("verdict"),
                         "count": int(risk.get("count", 0)),
-                        "avg_credibility": round(float(risk.get("avg_credibility", 0) or 0), 1),
-                        "avg_confidence": round(float(risk.get("avg_confidence", 0) or 0), 3),
+                        "avg_credibility": round(
+                            float(risk.get("avg_credibility", 0) or 0), 1
+                        ),
+                        "avg_confidence": round(
+                            float(risk.get("avg_confidence", 0) or 0), 3
+                        ),
                     }
                 )
 
             # Calculate summary statistics
             total_false_misleading = sum(r.get("count", 0) for r in risk_indicators)
             risk_percentage = (
-                (total_false_misleading / total_verdicts * 100) if total_verdicts > 0 else 0.0
+                (total_false_misleading / total_verdicts * 100)
+                if total_verdicts > 0
+                else 0.0
             )
 
             # Determine overall risk level
@@ -609,7 +673,9 @@ class AnalyticsService(BaseService):
             response = {
                 "period": {
                     "days": days,
-                    "start_date": (datetime.utcnow() - timedelta(days=days)).isoformat(),
+                    "start_date": (
+                        datetime.utcnow() - timedelta(days=days)
+                    ).isoformat(),
                     "end_date": datetime.utcnow().isoformat(),
                 },
                 "verdict_distribution": enriched_distribution,
@@ -624,7 +690,9 @@ class AnalyticsService(BaseService):
                 "summary": {
                     "total_verdicts": total_verdicts,
                     "unique_verdict_types": len(distribution),
-                    "most_common_verdict": distribution[0].get("verdict") if distribution else None,
+                    "most_common_verdict": distribution[0].get("verdict")
+                    if distribution
+                    else None,
                 },
             }
 
@@ -637,3 +705,219 @@ class AnalyticsService(BaseService):
         except Exception as e:
             self.log_error("get_verdict_analytics", e)
             raise
+
+    async def get_high_risk_articles(
+        self,
+        days: int = 30,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """Get articles with high-risk claims.
+
+        Args:
+            days: Number of days to look back (1-365)
+            limit: Maximum results to return (1-1000)
+            offset: Pagination offset (>=0)
+
+        Returns:
+            Dictionary with articles list, total count, and pagination info
+        """
+        # Validation
+        if days < 1 or days > 365:
+            raise ValidationError("Days parameter must be between 1 and 365")
+        if limit < 1 or limit > 1000:
+            raise ValidationError("Limit parameter must be between 1 and 1000")
+        if offset < 0:
+            raise ValidationError("Offset parameter must be >= 0")
+
+        # Get data from repository
+        articles, total = await self.analytics_repo.get_high_risk_articles(
+            days=days, limit=limit, offset=offset
+        )
+
+        # Format response
+        return {
+            "articles": [
+                {
+                    "article_id": str(a["article_id"]),
+                    "title": a["title"],
+                    "author": a.get("author"),
+                    "url": a.get("url"),
+                    "source_name": a.get("source_name"),
+                    "published_at": a["published_at"].isoformat()
+                    if a.get("published_at")
+                    else None,
+                    "fact_check_id": str(a["fact_check_id"]),
+                    "verdict": a["verdict"],
+                    "credibility_score": a["credibility_score"],
+                    "confidence_score": float(a["confidence_score"])
+                    if a.get("confidence_score")
+                    else None,
+                    "num_sources": a["num_sources"],
+                    "high_risk_claims_count": a["high_risk_claims_count"],
+                }
+                for a in articles
+            ],
+            "total": total,
+            "pagination": {
+                "limit": limit,
+                "offset": offset,
+                "has_more": offset + len(articles) < total,
+            },
+        }
+
+    async def get_source_breakdown(self, article_id: str) -> Dict[str, Any]:
+        """Get source breakdown for a specific article.
+
+        Args:
+            article_id: UUID of the article
+
+        Returns:
+            Dictionary with source breakdown details or None if not found
+        """
+        breakdown = await self.analytics_repo.get_source_breakdown(article_id)
+
+        if not breakdown:
+            return None
+
+        # Handle None source_breakdown (convert to empty dict)
+        source_breakdown = breakdown.get("source_breakdown") or {}
+
+        return {
+            "article_id": breakdown["article_id"],
+            "title": breakdown["title"],
+            "source_breakdown": source_breakdown,
+            "primary_source_type": breakdown.get("primary_source_type"),
+            "source_diversity_score": float(breakdown["source_diversity_score"])
+            if breakdown.get("source_diversity_score")
+            else None,
+            "num_sources": breakdown.get("num_sources", 0),
+            "source_consensus": breakdown.get("source_consensus"),
+        }
+
+    async def get_source_quality(self, days: int = 30) -> Dict[str, Any]:
+        """Get source quality metrics by source type.
+
+        Args:
+            days: Number of days to analyze (1-365)
+
+        Returns:
+            Dictionary with source type stats and overall metrics
+        """
+        # Validation
+        if days < 1 or days > 365:
+            raise ValidationError("Days parameter must be between 1 and 365")
+
+        # Get data from repository
+        stats = await self.analytics_repo.get_source_quality_stats(days=days)
+
+        # Format source type stats
+        source_types = [
+            {
+                "source_type": s["primary_source_type"],
+                "article_count": s["article_count"],
+                "avg_credibility_score": round(float(s["avg_credibility_score"]), 2),
+                "avg_num_sources": round(float(s["avg_num_sources"]), 2),
+                "avg_diversity_score": round(float(s["avg_diversity_score"]), 2),
+            }
+            for s in stats
+        ]
+
+        # Calculate overall weighted averages
+        total_articles = sum(s["article_count"] for s in source_types)
+
+        if total_articles > 0:
+            avg_credibility = (
+                sum(
+                    s["avg_credibility_score"] * s["article_count"]
+                    for s in source_types
+                )
+                / total_articles
+            )
+            avg_num_sources = (
+                sum(s["avg_num_sources"] * s["article_count"] for s in source_types)
+                / total_articles
+            )
+            avg_diversity = (
+                sum(s["avg_diversity_score"] * s["article_count"] for s in source_types)
+                / total_articles
+            )
+        else:
+            avg_credibility = avg_num_sources = avg_diversity = 0.0
+
+        return {
+            "source_types": source_types,
+            "overall": {
+                "total_articles": total_articles,
+                "avg_credibility_score": round(avg_credibility, 2),
+                "avg_num_sources": round(avg_num_sources, 2),
+                "avg_diversity_score": round(avg_diversity, 2),
+            },
+        }
+
+    async def get_risk_correlation(self, days: int = 30) -> Dict[str, Any]:
+        """Get risk vs credibility correlation analysis.
+
+        Args:
+            days: Number of days to analyze (1-365)
+
+        Returns:
+            Dictionary with risk level stats and insights
+        """
+        # Validation
+        if days < 1 or days > 365:
+            raise ValidationError("Days parameter must be between 1 and 365")
+
+        # Get data from repository
+        stats = await self.analytics_repo.get_risk_correlation_stats(days=days)
+
+        # Format risk level stats
+        risk_levels = [
+            {
+                "risk_category": s["risk_category"],
+                "article_count": s["article_count"],
+                "avg_credibility_score": round(float(s["avg_credibility_score"]), 2),
+                "false_verdict_count": s["false_verdict_count"],
+                "false_verdict_rate": round(float(s["false_verdict_rate"]), 2),
+            }
+            for s in stats
+        ]
+
+        # Generate insights based on correlation patterns
+        insights = []
+
+        # Find high and low risk data
+        high_risk = next((r for r in risk_levels if r["risk_category"] == "high"), None)
+        low_risk = next((r for r in risk_levels if r["risk_category"] == "low"), None)
+
+        if high_risk and low_risk:
+            # Calculate difference in false verdict rates
+            rate_diff = high_risk["false_verdict_rate"] - low_risk["false_verdict_rate"]
+
+            if rate_diff > 0.3:  # Strong correlation
+                insights.append(
+                    f"Strong correlation detected: High-risk claims have {high_risk['false_verdict_rate']*100:.0f}% "
+                    f"false verdict rate vs {low_risk['false_verdict_rate']*100:.0f}% for low-risk."
+                )
+                insights.append(
+                    "High-risk claims are strong indicators of false or misleading information."
+                )
+            elif rate_diff > 0.15:  # Moderate correlation
+                insights.append(
+                    f"Moderate correlation: High-risk claims show elevated false verdict rates "
+                    f"({high_risk['false_verdict_rate']*100:.0f}% vs {low_risk['false_verdict_rate']*100:.0f}%)."
+                )
+            else:  # Weak correlation
+                insights.append(
+                    "Correlation not strong: High-risk classification alone may not predict false information."
+                )
+        elif high_risk:
+            insights.append(
+                f"High-risk articles have a {high_risk['false_verdict_rate']*100:.0f}% false verdict rate "
+                f"({high_risk['false_verdict_count']} of {high_risk['article_count']} articles)."
+            )
+
+        return {
+            "risk_levels": risk_levels,
+            "insights": insights,
+        }

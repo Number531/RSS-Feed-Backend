@@ -158,6 +158,7 @@ def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> 
             "source_breakdown": {},
             "primary_source_type": None,
             "source_diversity_score": None,
+            "high_risk_claims_count": 0,
             "job_id": api_result.get("job_id", "unknown"),
             "validation_mode": api_result.get("validation_mode", "summary"),
             "processing_time_seconds": int(api_result.get("processing_time_seconds", 0)),
@@ -189,9 +190,10 @@ def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> 
     claims_analyzed = api_result.get("claims_analyzed", len(validation_results))
     claims_validated = api_result.get("claims_validated", len(validation_results))
 
-    # Get source info - aggregate from all validation results
+    # Get source info and risk assessment - aggregate from all validation results
     num_sources = 0
     source_breakdown = {"news": 0, "general": 0, "research": 0, "historical": 0}
+    high_risk_claims_count = 0
 
     for result in validation_results:
         result_validation = result.get("validation_result", result.get("validation_output", {}))
@@ -205,6 +207,12 @@ def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> 
         for source_type, count in evidence_breakdown.items():
             if source_type in source_breakdown:
                 source_breakdown[source_type] += count
+
+        # Count high-risk claims
+        claim_data = result.get("claim", {})
+        risk_level = claim_data.get("risk_level", "")
+        if risk_level and risk_level.upper() == "HIGH":
+            high_risk_claims_count += 1
 
     # Calculate source consensus and materialized fields based on breakdown
     if num_sources > 0:
@@ -279,6 +287,7 @@ def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> 
         "source_breakdown": source_breakdown,  # NEW: JSONB breakdown by type
         "primary_source_type": primary_source_type,  # NEW: Materialized dominant type
         "source_diversity_score": source_diversity_score,  # NEW: Diversity metric
+        "high_risk_claims_count": high_risk_claims_count,  # NEW: Count of HIGH risk claims
         "job_id": job_id,
         "validation_mode": validation_mode,
         "processing_time_seconds": processing_time,

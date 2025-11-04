@@ -53,6 +53,11 @@ class ArticleFactCheck(Base):
     primary_source_type = Column(String(20), nullable=True)  # NEW: Dominant source type
     source_diversity_score = Column(DECIMAL(3, 2), nullable=True)  # NEW: 0.0-1.0 diversity
 
+    # Risk assessment
+    high_risk_claims_count = Column(
+        Integer, nullable=False, server_default="0"
+    )  # NEW: Count of HIGH risk claims
+
     # Processing metadata
     job_id = Column(String(255), nullable=False, unique=True, index=True)
     validation_mode = Column(String(20), nullable=True)

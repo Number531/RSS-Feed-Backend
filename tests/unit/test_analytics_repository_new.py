@@ -179,7 +179,7 @@ class TestGetHighRiskArticles:
         
         # Mock count query
         mock_count_result = MagicMock()
-        mock_count_result.scalar.return_value = len(sample_high_risk_articles)
+        mock_count_result.scalar = MagicMock(return_value=len(sample_high_risk_articles))
         
         # Execute method will be called twice (once for data, once for count)
         mock_db_session.execute = AsyncMock(
@@ -213,7 +213,7 @@ class TestGetHighRiskArticles:
         mock_result.mappings.return_value = mock_mappings
         
         mock_count_result = MagicMock()
-        mock_count_result.scalar.return_value = 0
+        mock_count_result.scalar = MagicMock(return_value=0)
         
         mock_db_session.execute = AsyncMock(
             side_effect=[mock_result, mock_count_result]
@@ -245,7 +245,7 @@ class TestGetHighRiskArticles:
         mock_result.mappings.return_value = mock_mappings
         
         mock_count_result = MagicMock()
-        mock_count_result.scalar.return_value = 10  # Total is more than returned
+        mock_count_result.scalar = MagicMock(return_value=10)  # Total is more than returned
         
         mock_db_session.execute = AsyncMock(
             side_effect=[mock_result, mock_count_result]
@@ -450,9 +450,9 @@ class TestGetRiskCorrelationStats:
         # Verify
         assert len(results) == 3
         assert results[0]['risk_category'] == 'low'
-        assert results[0]['false_verdict_rate'] == Decimal('0.067')
+        assert abs(results[0]['false_verdict_rate'] - 0.067) < 0.001  # Allow small float difference
         assert results[2]['risk_category'] == 'high'
-        assert results[2]['false_verdict_rate'] == Decimal('0.75')
+        assert abs(results[2]['false_verdict_rate'] - 0.75) < 0.001
 
     @pytest.mark.asyncio
     async def test_get_risk_correlation_stats_empty(
@@ -502,7 +502,7 @@ class TestGetRiskCorrelationStats:
         # Verify
         assert len(results) == 1
         assert results[0]['risk_category'] == 'high'
-        assert results[0]['false_verdict_rate'] == Decimal('0.80')
+        assert abs(results[0]['false_verdict_rate'] - 0.80) < 0.001
 
     @pytest.mark.asyncio
     async def test_get_risk_correlation_stats_zero_false_rate(
@@ -531,4 +531,4 @@ class TestGetRiskCorrelationStats:
 
         # Verify
         assert len(results) == 1
-        assert results[0]['false_verdict_rate'] == Decimal('0.00')
+        assert abs(results[0]['false_verdict_rate'] - 0.00) < 0.001

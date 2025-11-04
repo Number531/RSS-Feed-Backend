@@ -403,10 +403,10 @@ class AnalyticsRepository:
         rows = result.mappings().all()
 
         return [dict(row) for row in rows]
+
     async def get_high_risk_articles(
         self,
-        min_risk_count: int = 1,
-        sort: str = "risk_desc",
+        days: int = 30,
         limit: int = 100,
         offset: int = 0,
     ) -> tuple[List[Dict[str, Any]], int]:
@@ -414,8 +414,7 @@ class AnalyticsRepository:
         Get articles with high-risk claims.
 
         Args:
-            min_risk_count: Minimum high-risk claims count
-            sort: Sort order (risk_desc, credibility_asc, recent)
+            days: Number of days to look back
             limit: Max results
             offset: Pagination offset
 
@@ -423,31 +422,36 @@ class AnalyticsRepository:
             Tuple of (articles list, total count)
         """
         from uuid import UUID
-        
-        # Build base query
+
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+
+        # Build base query - need more fields to match service expectations
         query = (
             select(
-                Article.id,
+                Article.id.label("article_id"),
                 Article.title,
-                Article.created_at,
+                Article.author,
+                Article.url,
+                Article.created_at.label("published_at"),
+                ArticleFactCheck.id.label("fact_check_id"),
                 ArticleFactCheck.high_risk_claims_count,
                 ArticleFactCheck.credibility_score,
+                ArticleFactCheck.confidence.label("confidence_score"),
                 ArticleFactCheck.verdict,
+                ArticleFactCheck.num_sources,
                 RSSSource.source_name,
             )
             .select_from(Article)
             .join(ArticleFactCheck, ArticleFactCheck.article_id == Article.id)
             .join(RSSSource, RSSSource.id == Article.rss_source_id)
-            .where(ArticleFactCheck.high_risk_claims_count >= min_risk_count)
+            .where(
+                and_(
+                    ArticleFactCheck.high_risk_claims_count > 0,
+                    Article.created_at >= cutoff_date,
+                )
+            )
+            .order_by(desc(ArticleFactCheck.high_risk_claims_count))
         )
-
-        # Apply sorting
-        if sort == "risk_desc":
-            query = query.order_by(desc(ArticleFactCheck.high_risk_claims_count))
-        elif sort == "credibility_asc":
-            query = query.order_by(ArticleFactCheck.credibility_score.asc())
-        elif sort == "recent":
-            query = query.order_by(desc(Article.created_at))
 
         # Get total count
         count_query = select(func.count()).select_from(query.subquery())
@@ -473,9 +477,11 @@ class AnalyticsRepository:
             Dict with source breakdown or None
         """
         from uuid import UUID
-        
+
         query = (
             select(
+                Article.id.label("article_id"),
+                Article.title,
                 ArticleFactCheck.num_sources,
                 ArticleFactCheck.source_breakdown,
                 ArticleFactCheck.primary_source_type,
@@ -483,6 +489,7 @@ class AnalyticsRepository:
                 ArticleFactCheck.source_consensus,
             )
             .select_from(ArticleFactCheck)
+            .join(Article, Article.id == ArticleFactCheck.article_id)
             .where(ArticleFactCheck.article_id == UUID(article_id))
         )
 
@@ -505,11 +512,11 @@ class AnalyticsRepository:
 
         query = (
             select(
-                ArticleFactCheck.primary_source_type.label("type"),
+                ArticleFactCheck.primary_source_type,
                 func.count(ArticleFactCheck.id).label("article_count"),
-                func.avg(ArticleFactCheck.source_diversity_score).label("avg_diversity"),
-                func.avg(ArticleFactCheck.credibility_score).label("avg_credibility"),
-                func.avg(ArticleFactCheck.num_sources).label("avg_sources"),
+                func.avg(ArticleFactCheck.source_diversity_score).label("avg_diversity_score"),
+                func.avg(ArticleFactCheck.credibility_score).label("avg_credibility_score"),
+                func.avg(ArticleFactCheck.num_sources).label("avg_num_sources"),
             )
             .select_from(ArticleFactCheck)
             .join(Article, Article.id == ArticleFactCheck.article_id)
@@ -528,9 +535,7 @@ class AnalyticsRepository:
 
         return [dict(row) for row in rows]
 
-    async def get_risk_correlation_stats(
-        self, days: int = 30
-    ) -> List[Dict[str, Any]]:
+    async def get_risk_correlation_stats(self, days: int = 30) -> List[Dict[str, Any]]:
         """
         Get correlation between risk level and credibility.
 
@@ -544,41 +549,46 @@ class AnalyticsRepository:
 
         # Categorize by risk level
         risk_category = case(
-            (ArticleFactCheck.high_risk_claims_count == 0, "low_risk"),
-            (ArticleFactCheck.high_risk_claims_count <= 2, "medium_risk"),
-            else_="high_risk",
+            (ArticleFactCheck.high_risk_claims_count == 0, "low"),
+            (ArticleFactCheck.high_risk_claims_count <= 2, "medium"),
+            else_="high",
         ).label("risk_category")
 
         query = (
             select(
                 risk_category,
                 func.count(ArticleFactCheck.id).label("article_count"),
-                func.avg(ArticleFactCheck.credibility_score).label("avg_credibility"),
-                # Verdict distribution as aggregated counts
-                func.count(case((ArticleFactCheck.verdict == "TRUE", 1))).label(
-                    "true_count"
-                ),
-                func.count(case((ArticleFactCheck.verdict == "FALSE", 1))).label(
-                    "false_count"
-                ),
-                func.count(case((ArticleFactCheck.verdict.like("%MOSTLY%"), 1))).label(
-                    "mostly_count"
-                ),
-                func.count(case((ArticleFactCheck.verdict.like("%MIXED%"), 1))).label(
-                    "mixed_count"
-                ),
-                func.count(
-                    case((ArticleFactCheck.verdict.like("%UNVERIFIED%"), 1))
-                ).label("unverified_count"),
+                func.avg(ArticleFactCheck.credibility_score).label("avg_credibility_score"),
+                # Count FALSE and MOSTLY_FALSE verdicts
+                func.sum(
+                    case(
+                        (
+                            ArticleFactCheck.verdict.in_(["FALSE", "MOSTLY_FALSE"]),
+                            1,
+                        ),
+                        else_=0,
+                    )
+                ).label("false_verdict_count"),
             )
             .select_from(ArticleFactCheck)
             .join(Article, Article.id == ArticleFactCheck.article_id)
             .where(Article.created_at >= cutoff_date)
             .group_by(risk_category)
-            .order_by(desc("avg_credibility"))
+            .order_by(desc("avg_credibility_score"))
         )
 
         result = await self.db.execute(query)
         rows = result.mappings().all()
 
-        return [dict(row) for row in rows]
+        # Calculate false_verdict_rate for each row
+        results = []
+        for row in rows:
+            row_dict = dict(row)
+            article_count = row_dict["article_count"]
+            false_count = row_dict["false_verdict_count"] or 0
+            row_dict["false_verdict_rate"] = (
+                float(false_count) / article_count if article_count > 0 else 0.0
+            )
+            results.append(row_dict)
+
+        return results

@@ -129,4 +129,40 @@ async def get_article_fact_check(
             status_code=status.HTTP_404_NOT_FOUND, detail="No fact-check found for this article"
         )
 
-    return fact_check
+    # Handle both old and new validation_results formats
+    # New format (iterative mode): list of claims
+    # Old format (summary mode): dict with single claim
+    validation_results = fact_check.validation_results
+    if isinstance(validation_results, list):
+        # Convert list format to dict format for API compatibility
+        validation_results = {
+            "claims": validation_results,
+            "mode": "iterative",
+            "total_claims": len(validation_results)
+        }
+
+    # Create response with normalized validation_results
+    return FactCheckResponse(
+        id=fact_check.id,
+        article_id=fact_check.article_id,
+        job_id=fact_check.job_id,
+        verdict=fact_check.verdict,
+        credibility_score=fact_check.credibility_score,
+        confidence=fact_check.confidence,
+        summary=fact_check.summary,
+        claims_analyzed=fact_check.claims_analyzed,
+        claims_validated=fact_check.claims_validated,
+        claims_true=fact_check.claims_true,
+        claims_false=fact_check.claims_false,
+        claims_misleading=fact_check.claims_misleading,
+        claims_unverified=fact_check.claims_unverified,
+        validation_results=validation_results,
+        num_sources=fact_check.num_sources,
+        source_consensus=fact_check.source_consensus,
+        validation_mode=fact_check.validation_mode,
+        processing_time_seconds=fact_check.processing_time_seconds,
+        api_costs=fact_check.api_costs,
+        fact_checked_at=fact_check.fact_checked_at,
+        created_at=fact_check.created_at,
+        updated_at=fact_check.updated_at,
+    )

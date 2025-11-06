@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import declarative_base
 from app.core.config import settings
 
-# Create async engine
+# Create async engine for Supabase Session pooler (port 5432)
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,

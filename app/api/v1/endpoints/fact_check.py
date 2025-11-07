@@ -196,8 +196,8 @@ async def get_article_fact_check(
     - ✅ Per-claim detailed analysis
     - ✅ Full validation results from Railway API
     
-    **Performance note:** This endpoint fetches data on-demand from Railway API,
-    which may take 1-2 seconds. Use sparingly and cache results when possible.
+    **Performance note:** This endpoint returns cached data from the database,
+    which includes all references and evidence from the original fact-check.
     
     **Typical use cases:**
     - Displaying full source list for transparency
@@ -221,7 +221,7 @@ async def get_detailed_fact_check(
     article_id: UUID, db: AsyncSession = Depends(get_db)
 ) -> DetailedFactCheckResponse:
     """
-    Get complete fact-check with all sources and evidence from Railway API.
+    Get complete fact-check with all sources and evidence from cached data.
     
     Args:
         article_id: UUID of the article
@@ -231,7 +231,7 @@ async def get_detailed_fact_check(
         Complete fact-check with detailed claim analysis, sources, and evidence
         
     Raises:
-        HTTPException: 404 if fact-check not found, 503 if API unavailable
+        HTTPException: 404 if fact-check not found
     """
     # 1. Get basic fact-check record from database
     result = await db.execute(
@@ -245,29 +245,24 @@ async def get_detailed_fact_check(
             detail="No fact-check found for this article",
         )
 
-    # 2. Fetch detailed results from Railway API using job_id
-    fact_check_repo = FactCheckRepository(db)
-    article_repo = ArticleRepository(db)
-    service = FactCheckService(fact_check_repo, article_repo)
-
-    try:
-        # This fetches the FULL validation_results with sources and evidence
-        detailed_results = await service.get_detailed_fact_check_results(fact_check.job_id)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Failed to fetch detailed results from Railway API: {str(e)}",
-        )
-
-    # 3. Parse and structure the detailed results
-    validation_results = detailed_results.get("validation_results", {})
-    claims_data = validation_results.get("claims", [])
+    # 2. Use cached validation_results from database (already contains references)
+    validation_results = fact_check.validation_results
+    
+    # Handle both list and dict formats
+    if isinstance(validation_results, list):
+        claims_data = validation_results
+    elif isinstance(validation_results, dict):
+        claims_data = validation_results.get("claims", [])
+    else:
+        claims_data = []
 
     # 4. Build detailed claim analysis with all evidence
     detailed_claims = []
     for idx, claim_item in enumerate(claims_data):
+        # Database format: claim_item contains both 'claim' dict and 'validation_result' dict
         claim = claim_item.get("claim", {})
-        validation_result = claim_item.get("validation_result", {})
+        # Try both 'validation_result' and 'validation_output' (API may use either)
+        validation_result = claim_item.get("validation_result", claim_item.get("validation_output", {}))
 
         # Extract references (sources)
         references = []

@@ -124,6 +124,47 @@ def calculate_verdict_counts(validation_results: List[Dict[str, Any]]) -> Dict[s
     return counts
 
 
+def extract_references_and_evidence(api_result: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extract references and key_evidence from article_data in Railway API response.
+    
+    The Railway API stores full citation data in article_data.references and
+    article_data.key_evidence, not in validation_results.
+    
+    Args:
+        api_result: Complete API response from Railway
+        
+    Returns:
+        dict: {
+            "references": List of citation dicts,
+            "key_evidence": Dict with supporting/contradicting/context arrays
+        }
+    """
+    article_data = api_result.get("article_data", {})
+    
+    # Extract references from article_data
+    references = article_data.get("references", [])
+    
+    # Extract key_evidence from multiple possible locations
+    key_evidence = article_data.get("key_evidence", {})
+    
+    if not key_evidence:
+        # Try alternate location: verdict_summary.key_supporting_evidence
+        verdict_summary = article_data.get("verdict_summary", {})
+        key_evidence = verdict_summary.get("key_supporting_evidence", {})
+    
+    if not key_evidence:
+        # Try alternate location: sidebar_elements.high_risk_claims_panel
+        sidebar = article_data.get("sidebar_elements", {})
+        claims_panel = sidebar.get("high_risk_claims_panel", {})
+        key_evidence = claims_panel.get("key_evidence", {})
+    
+    return {
+        "references": references,
+        "key_evidence": key_evidence
+    }
+
+
 def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> Dict[str, Any]:
     """
     Transform fact-check API result to database record format.
@@ -268,6 +309,33 @@ def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> 
             fact_checked_at = datetime.now(timezone.utc)
     else:
         fact_checked_at = datetime.now(timezone.utc)
+    
+    # Extract references and key_evidence from article_data
+    extracted_data = extract_references_and_evidence(api_result)
+    references = extracted_data["references"]
+    key_evidence = extracted_data["key_evidence"]
+    
+    # Inject into validation_results for storage
+    enhanced_validation_results = []
+    for result in validation_results:
+        enhanced_result = result.copy()
+        val_result = enhanced_result.get("validation_result", {})
+        
+        # Add references and key_evidence to validation_result
+        if references:
+            val_result["references"] = references
+        if key_evidence:
+            val_result["key_evidence"] = key_evidence
+        
+        enhanced_result["validation_result"] = val_result
+        enhanced_validation_results.append(enhanced_result)
+    
+    # Log extraction success
+    if references or key_evidence:
+        logger.info(
+            f"Extracted citation data for article {article_id}: "
+            f"references={len(references)}, key_evidence_categories={len(key_evidence)}"
+        )
 
     return {
         "article_id": article_id,
@@ -281,7 +349,7 @@ def transform_api_result_to_db(api_result: Dict[str, Any], article_id: UUID) -> 
         "claims_false": verdict_counts["FALSE"],
         "claims_misleading": verdict_counts["MISLEADING"],
         "claims_unverified": verdict_counts["UNVERIFIED"],
-        "validation_results": validation_results,  # Store complete array
+        "validation_results": enhanced_validation_results,  # Store enhanced array with citations
         "num_sources": num_sources,
         "source_consensus": source_consensus,
         "source_breakdown": source_breakdown,  # NEW: JSONB breakdown by type

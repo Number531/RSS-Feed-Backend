@@ -372,7 +372,7 @@ async def test_article_with_fact_check(client: AsyncClient, db_session: AsyncSes
     """Create a test article with a basic fact-check."""
     from app.models.article import Article
     from app.models.rss_source import RSSSource
-    from app.models.fact_check import FactCheck
+    from app.models.fact_check import ArticleFactCheck
     from uuid import uuid4
     from datetime import datetime
     import hashlib
@@ -412,7 +412,7 @@ async def test_article_with_fact_check(client: AsyncClient, db_session: AsyncSes
     await db_session.commit()
     
     # Create fact-check
-    fact_check = FactCheck(
+    fact_check = ArticleFactCheck(
         id=uuid4(),
         article_id=article.id,
         job_id=f"test-job-{unique_id}",
@@ -427,21 +427,23 @@ async def test_article_with_fact_check(client: AsyncClient, db_session: AsyncSes
         claims_misleading=0,
         claims_unverified=0,
         validation_results={
-            "claim": "Test claim",
-            "verdict": "TRUE",
-            "confidence": 0.9,
-            "key_evidence": {
-                "supporting": ["Evidence 1"],
-                "contradicting": [],
-                "context": []
-            },
-            "references": [
+            "mode": "iterative",
+            "total_claims": 1,
+            "claims": [
                 {
-                    "citation_id": 1,
-                    "title": "Test Source",
-                    "url": "https://example.com",
-                    "source": "Test News",
-                    "credibility": "HIGH"
+                    "claim": {
+                        "claim": "Test claim",
+                        "category": "Iterative Claim",
+                        "risk_level": "HIGH"
+                    },
+                    "validation_result": {
+                        "verdict": "TRUE",
+                        "confidence": 0.9,
+                        "summary": "Test fact-check summary",
+                        "evidence_count": 10,
+                        "evidence_breakdown": {"news": 10},
+                        "validation_mode": "thorough"
+                    }
                 }
             ]
         },
@@ -469,7 +471,7 @@ async def test_article_with_complete_fact_check(client: AsyncClient, db_session:
     """Create a test article with a complete fact-check (all fields populated)."""
     from app.models.article import Article
     from app.models.rss_source import RSSSource
-    from app.models.fact_check import FactCheck
+    from app.models.fact_check import ArticleFactCheck
     from uuid import uuid4
     from datetime import datetime
     import hashlib
@@ -509,7 +511,7 @@ async def test_article_with_complete_fact_check(client: AsyncClient, db_session:
     await db_session.commit()
     
     # Create complete fact-check with all optional fields
-    fact_check = FactCheck(
+    fact_check = ArticleFactCheck(
         id=uuid4(),
         article_id=article.id,
         job_id=f"test-job-complete-{unique_id}",
@@ -524,28 +526,23 @@ async def test_article_with_complete_fact_check(client: AsyncClient, db_session:
         claims_misleading=2,
         claims_unverified=0,
         validation_results={
-            "claim": "Complete test claim",
-            "verdict": "MISLEADING",
-            "confidence": 0.75,
-            "key_evidence": {
-                "supporting": ["Evidence 1", "Evidence 2"],
-                "contradicting": ["Counter evidence"],
-                "context": ["Context info"]
-            },
-            "references": [
+            "mode": "iterative",
+            "total_claims": 5,
+            "claims": [
                 {
-                    "citation_id": 1,
-                    "title": "Source 1",
-                    "url": "https://example.com/1",
-                    "source": "News Outlet 1",
-                    "credibility": "HIGH"
-                },
-                {
-                    "citation_id": 2,
-                    "title": "Source 2",
-                    "url": "https://example.com/2",
-                    "source": "News Outlet 2",
-                    "credibility": "MEDIUM"
+                    "claim": {
+                        "claim": "Complete test claim",
+                        "category": "Iterative Claim",
+                        "risk_level": "MEDIUM"
+                    },
+                    "validation_result": {
+                        "verdict": "MISLEADING",
+                        "confidence": 0.75,
+                        "summary": "Complete test fact-check with all fields",
+                        "evidence_count": 25,
+                        "evidence_breakdown": {"news": 15, "research": 10},
+                        "validation_mode": "thorough"
+                    }
                 }
             ]
         },

@@ -242,6 +242,43 @@ class FactCheckService(BaseService):
             self.log_error("get_fact_check_by_article", e, article_id=str(article_id))
             raise
 
+    async def get_detailed_fact_check_results(self, job_id: str) -> dict:
+        """
+        Fetch complete fact-check results with ALL details from Railway API.
+        
+        This method retrieves the full validation_results from the Railway API,
+        including:
+        - Individual source references (URLs, titles, credibility ratings)
+        - Evidence quotes (supporting, contradicting, context)
+        - Citation IDs for traceability
+        - Source names and relevance scores
+        
+        Args:
+            job_id: Railway API job ID
+            
+        Returns:
+            dict: Complete validation results with all evidence and sources
+            
+        Raises:
+            FactCheckAPIError: If API call fails or job not found
+        """
+        self.log_operation("get_detailed_fact_check_results", job_id=job_id)
+        
+        try:
+            async with FactCheckAPIClient() as client:
+                # Fetch full result from Railway API
+                result = await client.get_job_result(job_id)
+                
+                # Railway API returns complete validation_results with:
+                # - claims[].validation_result.references (list of sources)
+                # - claims[].validation_result.key_evidence (categorized quotes)
+                # - claims[].validation_result.source_analysis
+                return result
+                
+        except Exception as e:
+            self.log_error("get_detailed_fact_check_results", e, job_id=job_id)
+            raise FactCheckAPIError(f"Failed to fetch detailed results: {str(e)}")
+
     async def get_fact_check_status(self, job_id: str) -> dict:
         """
         Get current status of a fact-check job.

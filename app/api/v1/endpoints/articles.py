@@ -207,18 +207,11 @@ async def get_article_full(
     # 1. Get article details
     article = await article_service.get_article_by_id(article_id=article_id, user_id=user_id)
 
-    # Generate ETag based on article updated timestamp
-    timestamp = getattr(article, "updated_at", article.created_at)
-    etag = f'"{timestamp.timestamp()}"'
-
-    # Check If-None-Match header for 304 Not Modified response
-    if_none_match = request.headers.get("if-none-match")
-    if if_none_match == etag:
-        return Response(status_code=304)
-
-    # Set cache headers (shorter cache for combined endpoint due to dynamic nature)
-    response.headers["Cache-Control"] = "public, max-age=60, s-maxage=60"  # 1 minute
-    response.headers["ETag"] = etag
+    # Temporarily disable caching to ensure fresh fact-check data with validation_results
+    # TODO: Re-enable with proper cache invalidation once frontend handles new data format
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
 
     # 2. Get user vote (if authenticated)
     user_vote = None
@@ -258,6 +251,15 @@ async def get_article_full(
             article_id
         )
         if fact_check_data:
+            # Handle both old and new validation_results formats
+            validation_results = fact_check_data.validation_results
+            if isinstance(validation_results, list):
+                # Convert list format to dict format for API compatibility
+                validation_results = {
+                    "claims": validation_results,
+                    "mode": "iterative",
+                    "total_claims": len(validation_results)
+                }
             fact_check = {
                 "id": str(fact_check_data.id),
                 "verdict": fact_check_data.verdict,
@@ -270,6 +272,7 @@ async def get_article_full(
                 "claims_misleading": fact_check_data.claims_misleading,
                 "source_consensus": fact_check_data.source_consensus,
                 "validation_mode": fact_check_data.validation_mode,
+                "validation_results": validation_results,
             }
     except Exception:
         # Non-critical, continue without fact-check

@@ -628,5 +628,509 @@ For questions or issues with these endpoints:
 - Documentation: `/docs/ANALYTICS_API.md`
 - Email: backend-team@example.com
 
-**Last Updated**: November 4, 2025
-**Version**: 1.1.0
+**Last Updated**: November 7, 2025
+**Version**: 1.2.0
+
+---
+
+## 5. Get Detailed Fact-Check (with ALL Sources & Evidence)
+
+**NEW in v1.2.0**: Retrieve the **complete** fact-check details including ALL individual source references, evidence quotes, and citation metadata that were used during the fact-checking process.
+
+### Endpoint
+
+```http
+GET /api/v1/articles/{article_id}/fact-check/detailed
+```
+
+### Path Parameters
+
+| Parameter    | Type   | Required | Description                  |
+|--------------|--------|----------|------------------------------|
+| `article_id` | string | Yes      | UUID of the article          |
+
+### What's Different from the Summary Endpoint?
+
+The standard `/fact-check` endpoint returns **summarized** data with evidence counts and breakdowns. This **detailed** endpoint fetches **complete granular data** from the Railway API:
+
+| Standard Endpoint                | Detailed Endpoint                                    |
+|----------------------------------|------------------------------------------------------|
+| ✅ Overall verdict + score       | ✅ Overall verdict + score                            |
+| ✅ Evidence *counts*             | ✅ Evidence *counts* + **full evidence quotes**        |
+| ✅ Source *breakdown* by type    | ✅ Source *breakdown* + **individual source references** |
+| ❌ Individual sources             | ✅ **All source URLs, titles, credibility ratings**   |
+| ❌ Evidence quotes               | ✅ **Supporting, contradicting, and context quotes**  |
+| ❌ Citation IDs                  | ✅ **Traceable citation IDs**                         |
+
+### Request Example
+
+```http
+GET /api/v1/articles/fadb7b72-de4f-407a-91b9-bcbce8a7ae87/fact-check/detailed
+```
+
+### Response
+
+**Status Code:** `200 OK`
+
+```json
+{
+  "id": "8b2e1d3c-4f5a-6b7c-8d9e-0f1a2b3c4d5e",
+  "article_id": "fadb7b72-de4f-407a-91b9-bcbce8a7ae87",
+  "job_id": "2c23d1cd-d571-47be-bc0b-7465f007fec9",
+  "verdict": "MOSTLY TRUE",
+  "credibility_score": 82,
+  "confidence": 0.87,
+  "summary": "Article contains mostly accurate information with minor issues",
+  "claims_analyzed": 4,
+  "claims_validated": 4,
+  "claims_true": 2,
+  "claims_false": 0,
+  "claims_misleading": 2,
+  "claims_unverified": 0,
+  "claims": [
+    {
+      "claim_text": "U.S. District Judge ordered Trump admin to fund SNAP by Friday",
+      "claim_index": 0,
+      "category": "Iterative Claim",
+      "risk_level": "HIGH",
+      "verdict": "MOSTLY TRUE",
+      "confidence": 0.9,
+      "summary": "The claim is largely accurate. Judge John McConnell...",
+      "key_evidence": {
+        "supporting": [
+          "Court order dated November 6, 2025 explicitly requires full SNAP funding by November 7",
+          "Judge John McConnell's ruling cited administration's failure to comply with federal law"
+        ],
+        "contradicting": [],
+        "context": [
+          "SNAP provides food assistance to over 40 million Americans",
+          "Previous administration had attempted to reduce SNAP funding through regulatory changes"
+        ]
+      },
+      "references": [
+        {
+          "citation_id": 1,
+          "title": "Judge orders Trump admin to restore SNAP funding by Friday",
+          "url": "https://apnews.com/article/snap-funding-court-order-2025",
+          "source": "AP News",
+          "credibility": "HIGH",
+          "relevance_score": 0.95,
+          "published_date": "2025-11-06"
+        },
+        {
+          "citation_id": 2,
+          "title": "Federal court mandates immediate SNAP restoration",
+          "url": "https://reuters.com/legal/snap-court-ruling",
+          "source": "Reuters",
+          "credibility": "HIGH",
+          "relevance_score": 0.93
+        },
+        {
+          "citation_id": 3,
+          "title": "Rhode Island court rules on SNAP funding",
+          "url": "https://providence-journal.com/snap-ruling",
+          "source": "Providence Journal",
+          "credibility": "MEDIUM",
+          "relevance_score": 0.88
+        }
+      ],
+      "evidence_count": 35,
+      "evidence_breakdown": {
+        "news": 10,
+        "general": 10,
+        "research": 10,
+        "historical": 5
+      },
+      "validation_mode": "thorough"
+    }
+  ],
+  "total_sources": 140,
+  "source_consensus": "STRONG_AGREEMENT",
+  "validation_mode": "iterative",
+  "processing_time_seconds": 301,
+  "api_costs": {
+    "total": 0.012,
+    "validation": 0.008,
+    "research": 0.004
+  },
+  "fact_checked_at": "2025-11-07T05:34:59Z"
+}
+```
+
+### Response Fields
+
+| Field                          | Type                | Description                                           |
+|--------------------------------|---------------------|-------------------------------------------------------|
+| `id`                           | string (UUID)       | Fact-check record ID                                  |
+| `article_id`                   | string (UUID)       | Article identifier                                    |
+| `job_id`                       | string              | Railway API job ID (for traceability)                 |
+| `verdict`                      | string              | Overall verdict                                       |
+| `credibility_score`            | integer             | Overall credibility (0-100)                           |
+| `confidence`                   | decimal             | AI confidence (0.0-1.0)                               |
+| `summary`                      | string              | Overall analysis summary                              |
+| `claims_analyzed`              | integer             | Total claims analyzed                                 |
+| `claims_validated`             | integer             | Claims successfully validated                         |
+| `claims_true`                  | integer             | Count of TRUE verdicts                                |
+| `claims_false`                 | integer             | Count of FALSE verdicts                               |
+| `claims_misleading`            | integer             | Count of MISLEADING verdicts                          |
+| `claims_unverified`            | integer             | Count of UNVERIFIED claims                            |
+| **`claims`**                   | **array**           | **Detailed claim analysis (KEY NEW DATA)**            |
+| `claims[].claim_text`          | string              | Original claim statement                              |
+| `claims[].claim_index`         | integer             | Zero-based claim index                                |
+| `claims[].category`            | string              | Claim category                                        |
+| `claims[].risk_level`          | string              | Risk level (HIGH, MEDIUM, LOW)                        |
+| `claims[].verdict`             | string              | Claim verdict                                         |
+| `claims[].confidence`          | decimal             | Confidence for this claim                             |
+| `claims[].summary`             | string              | Detailed claim analysis                               |
+| **`claims[].key_evidence`**    | **object**          | **Categorized evidence quotes (NEW)**                 |
+| `claims[].key_evidence.supporting` | array (string)  | Evidence supporting the claim                         |
+| `claims[].key_evidence.contradicting` | array (string) | Evidence contradicting the claim                      |
+| `claims[].key_evidence.context` | array (string)     | Background context information                        |
+| **`claims[].references`**      | **array**           | **Individual source citations (NEW)**                 |
+| `claims[].references[].citation_id` | integer        | Unique citation identifier                            |
+| `claims[].references[].title`  | string              | Source article/document title                         |
+| `claims[].references[].url`    | string              | Direct URL to source                                  |
+| `claims[].references[].source` | string              | Source name (e.g., "Reuters", "AP News")              |
+| `claims[].references[].credibility` | string         | Source credibility rating (HIGH, MEDIUM, LOW)         |
+| `claims[].references[].relevance_score` | decimal    | Relevance to claim (0.0-1.0)                          |
+| `claims[].references[].published_date` | string      | Source publication date                               |
+| `claims[].evidence_count`      | integer             | Total evidence items for this claim                   |
+| `claims[].evidence_breakdown`  | object              | Evidence by type (news, research, etc.)               |
+| `claims[].validation_mode`     | string              | Validation mode used                                  |
+| `total_sources`                | integer             | Total unique sources across all claims                |
+| `source_consensus`             | string              | Overall source agreement level                        |
+| `validation_mode`              | string              | Overall validation mode                               |
+| `processing_time_seconds`      | integer             | Time taken for fact-check                             |
+| `api_costs`                    | object              | Breakdown of API costs                                |
+| `fact_checked_at`              | string (ISO 8601)   | Timestamp of fact-check completion                    |
+
+### Performance Notes
+
+**Important:** This endpoint fetches data **on-demand** from the Railway API, which may take 1-2 seconds. The standard `/fact-check` endpoint is faster because it reads from the database.
+
+**Use cases:**
+- Displaying full source list for transparency
+- Citation tracking and verification  
+- Academic analysis requiring source metadata
+- Detailed evidence inspection
+- Building trust indicators with source details
+
+**Optimization:**
+- Cache results client-side when possible
+- Use the lightweight `/claims` endpoint for navigation
+- Reserve this endpoint for user-initiated "View Details" actions
+
+### Error Responses
+
+**404 Not Found** - Article has no fact-check
+```json
+{
+  "detail": "No fact-check found for this article"
+}
+```
+
+**503 Service Unavailable** - Railway API unavailable or job expired
+```json
+{
+  "detail": "Failed to fetch detailed results from Railway API: Job expired or API unavailable"
+}
+```
+
+---
+
+## 6. List Article Claims (Lightweight)
+
+Retrieve a **lightweight list** of all claims in an article WITHOUT fetching full evidence and sources. Useful for navigation and overview UIs.
+
+### Endpoint
+
+```http
+GET /api/v1/articles/{article_id}/fact-check/claims
+```
+
+### Path Parameters
+
+| Parameter    | Type   | Required | Description                  |
+|--------------|--------|----------|------------------------------|
+| `article_id` | string | Yes      | UUID of the article          |
+
+### Request Example
+
+```http
+GET /api/v1/articles/fadb7b72-de4f-407a-91b9-bcbce8a7ae87/fact-check/claims
+```
+
+### Response
+
+**Status Code:** `200 OK`
+
+```json
+{
+  "article_id": "fadb7b72-de4f-407a-91b9-bcbce8a7ae87",
+  "total_claims": 4,
+  "claims": [
+    {
+      "claim_index": 0,
+      "claim_text": "U.S. District Judge ordered Trump admin to fund SNAP by Friday",
+      "category": "Iterative Claim",
+      "risk_level": "HIGH",
+      "verdict": "MOSTLY TRUE",
+      "confidence": 0.9,
+      "evidence_count": 35
+    },
+    {
+      "claim_index": 1,
+      "claim_text": "SNAP provides food assistance to over 40 million Americans",
+      "category": "Iterative Claim",
+      "risk_level": "MEDIUM",
+      "verdict": "TRUE",
+      "confidence": 0.95,
+      "evidence_count": 30
+    },
+    {
+      "claim_index": 2,
+      "claim_text": "Previous administration attempted to reduce SNAP funding",
+      "category": "Iterative Claim",
+      "risk_level": "MEDIUM",
+      "verdict": "MOSTLY TRUE",
+      "confidence": 0.85,
+      "evidence_count": 40
+    },
+    {
+      "claim_index": 3,
+      "claim_text": "Rhode Island federal court issued the ruling",
+      "category": "Iterative Claim",
+      "risk_level": "LOW",
+      "verdict": "TRUE",
+      "confidence": 0.98,
+      "evidence_count": 35
+    }
+  ]
+}
+```
+
+### Response Fields
+
+| Field                       | Type          | Description                                           |
+|-----------------------------|---------------|-------------------------------------------------------|
+| `article_id`                | string (UUID) | Article identifier                                    |
+| `total_claims`              | integer       | Total number of claims                                |
+| `claims`                    | array         | List of claim summaries                               |
+| `claims[].claim_index`      | integer       | Zero-based claim index                                |
+| `claims[].claim_text`       | string        | Original claim statement                              |
+| `claims[].category`         | string        | Claim category                                        |
+| `claims[].risk_level`       | string        | Risk level (HIGH, MEDIUM, LOW)                        |
+| `claims[].verdict`          | string        | Claim verdict                                         |
+| `claims[].confidence`       | decimal       | AI confidence (0.0-1.0)                               |
+| `claims[].evidence_count`   | integer       | Total evidence items                                  |
+
+**Note:** This endpoint does **NOT** include:
+- Individual source references
+- Evidence quotes
+- Citation details
+
+Use the detailed endpoint (`/fact-check/detailed`) to get full information.
+
+### Use Cases
+
+- **Navigation UI**: Display claim list for user to select
+- **Quick Overview**: Show claim count and verdicts
+- **Search Results**: Include claim summaries in search
+- **Mobile Apps**: Lightweight payload for mobile devices
+
+### Error Responses
+
+**404 Not Found** - Article has no fact-check
+```json
+{
+  "detail": "No fact-check found for this article"
+}
+```
+
+---
+
+## Endpoint Comparison Summary
+
+| Endpoint                                         | Speed  | Data Included                                      | Use Case                              |
+|--------------------------------------------------|--------|-----------------------------------------------------|---------------------------------------|
+| `GET /articles/{id}/fact-check`                  | Fast   | Overall verdict, claim summaries, evidence counts   | General fact-check display            |
+| `GET /articles/{id}/fact-check/claims`           | Fast   | Lightweight claim list (no sources)                 | Navigation, claim overview            |
+| `GET /articles/{id}/fact-check/detailed`         | Slower | **EVERYTHING**: sources, evidence quotes, citations | Detailed inspection, source transparency |
+
+---
+
+## Integration Example: React Component
+
+```tsx
+import React, { useState, useEffect } from 'react';
+
+interface ClaimReference {
+  citation_id: number;
+  title: string;
+  url: string;
+  source: string;
+  credibility: string;
+  relevance_score?: number;
+}
+
+interface DetailedClaim {
+  claim_text: string;
+  claim_index: number;
+  verdict: string;
+  confidence: number;
+  summary: string;
+  key_evidence: {
+    supporting: string[];
+    contradicting: string[];
+    context: string[];
+  };
+  references: ClaimReference[];
+  evidence_count: number;
+}
+
+interface DetailedFactCheck {
+  verdict: string;
+  credibility_score: number;
+  claims: DetailedClaim[];
+  total_sources: number;
+}
+
+export const FactCheckDetailView: React.FC<{ articleId: string }> = ({ articleId }) => {
+  const [factCheck, setFactCheck] = useState<DetailedFactCheck | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedClaim, setSelectedClaim] = useState<number>(0);
+
+  useEffect(() => {
+    async function loadDetails() {
+      try {
+        const response = await fetch(
+          `/api/v1/articles/${articleId}/fact-check/detailed`
+        );
+        const data = await response.json();
+        setFactCheck(data);
+      } catch (error) {
+        console.error('Failed to load detailed fact-check:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDetails();
+  }, [articleId]);
+
+  if (loading) return <div>Loading detailed analysis...</div>;
+  if (!factCheck) return <div>No fact-check available</div>;
+
+  const claim = factCheck.claims[selectedClaim];
+
+  return (
+    <div className="fact-check-detail">
+      <div className="overall-verdict">
+        <h2>Verdict: {factCheck.verdict}</h2>
+        <div className="credibility-score">
+          Credibility Score: {factCheck.credibility_score}/100
+        </div>
+        <div className="source-count">
+          {factCheck.total_sources} unique sources consulted
+        </div>
+      </div>
+
+      <div className="claim-navigator">
+        <h3>Claims ({factCheck.claims.length})</h3>
+        {factCheck.claims.map((c, idx) => (
+          <button
+            key={idx}
+            onClick={() => setSelectedClaim(idx)}
+            className={selectedClaim === idx ? 'active' : ''}
+          >
+            Claim {idx + 1}: {c.verdict}
+          </button>
+        ))}
+      </div>
+
+      <div className="claim-detail">
+        <h3>Claim {selectedClaim + 1}</h3>
+        <p className="claim-text">{claim.claim_text}</p>
+        <div className="verdict">
+          <span className={`badge ${claim.verdict.toLowerCase()}`}>
+            {claim.verdict}
+          </span>
+          <span className="confidence">
+            {(claim.confidence * 100).toFixed(0)}% confidence
+          </span>
+        </div>
+
+        <div className="summary">
+          <h4>Analysis</h4>
+          <p>{claim.summary}</p>
+        </div>
+
+        <div className="evidence">
+          <h4>Evidence ({claim.evidence_count} items)</h4>
+          
+          {claim.key_evidence.supporting.length > 0 && (
+            <div className="supporting">
+              <h5>✅ Supporting Evidence</h5>
+              <ul>
+                {claim.key_evidence.supporting.map((ev, idx) => (
+                  <li key={idx}>{ev}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {claim.key_evidence.contradicting.length > 0 && (
+            <div className="contradicting">
+              <h5>❌ Contradicting Evidence</h5>
+              <ul>
+                {claim.key_evidence.contradicting.map((ev, idx) => (
+                  <li key={idx}>{ev}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {claim.key_evidence.context.length > 0 && (
+            <div className="context">
+              <h5>📚 Context</h5>
+              <ul>
+                {claim.key_evidence.context.map((ev, idx) => (
+                  <li key={idx}>{ev}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="sources">
+          <h4>Sources ({claim.references.length})</h4>
+          <div className="source-list">
+            {claim.references.map((ref) => (
+              <div key={ref.citation_id} className="source-card">
+                <div className="source-header">
+                  <span className="source-name">{ref.source}</span>
+                  <span className={`credibility ${ref.credibility.toLowerCase()}`}>
+                    {ref.credibility}
+                  </span>
+                </div>
+                <h5>
+                  <a href={ref.url} target="_blank" rel="noopener noreferrer">
+                    {ref.title}
+                  </a>
+                </h5>
+                {ref.relevance_score && (
+                  <div className="relevance">
+                    Relevance: {(ref.relevance_score * 100).toFixed(0)}%
+                  </div>
+                )}
+                <div className="citation-id">Citation ID: {ref.citation_id}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+---

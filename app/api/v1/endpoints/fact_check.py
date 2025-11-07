@@ -10,7 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.fact_check import ArticleFactCheck
+from app.repositories.fact_check_repository import FactCheckRepository
+from app.repositories.article_repository import ArticleRepository
 from app.schemas.fact_check import FactCheckResponse
+from app.schemas.fact_check_detail import (
+    DetailedFactCheckResponse,
+    ClaimAnalysis,
+    ClaimListResponse,
+    SourceReference,
+    KeyEvidence,
+)
+from app.services.fact_check_service import FactCheckService
 
 router = APIRouter()
 
@@ -165,4 +175,235 @@ async def get_article_fact_check(
         fact_checked_at=fact_check.fact_checked_at,
         created_at=fact_check.created_at,
         updated_at=fact_check.updated_at,
+    )
+
+
+@router.get(
+    "/articles/{article_id}/fact-check/detailed",
+    response_model=DetailedFactCheckResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get COMPLETE fact-check with all sources and evidence",
+    description="""
+    Retrieve the **complete** fact-check with EVERY detail from Railway API.
+    
+    This endpoint exposes ALL data that was NOT included in the summary endpoint:
+    
+    **What you get:**
+    - ✅ Individual source references (title, URL, source name, credibility)
+    - ✅ Evidence quotes (supporting, contradicting, context)
+    - ✅ Citation IDs for traceability
+    - ✅ Source relevance scores
+    - ✅ Per-claim detailed analysis
+    - ✅ Full validation results from Railway API
+    
+    **Performance note:** This endpoint fetches data on-demand from Railway API,
+    which may take 1-2 seconds. Use sparingly and cache results when possible.
+    
+    **Typical use cases:**
+    - Displaying full source list for transparency
+    - Citation tracking and verification
+    - Academic analysis requiring source metadata
+    - Detailed evidence inspection
+    """,
+    responses={
+        200: {
+            "description": "Complete fact-check with all sources and evidence",
+        },
+        404: {
+            "description": "Fact-check not found or Railway API job expired",
+        },
+        503: {
+            "description": "Railway API unavailable",
+        },
+    },
+)
+async def get_detailed_fact_check(
+    article_id: UUID, db: AsyncSession = Depends(get_db)
+) -> DetailedFactCheckResponse:
+    """
+    Get complete fact-check with all sources and evidence from Railway API.
+    
+    Args:
+        article_id: UUID of the article
+        db: Database session
+        
+    Returns:
+        Complete fact-check with detailed claim analysis, sources, and evidence
+        
+    Raises:
+        HTTPException: 404 if fact-check not found, 503 if API unavailable
+    """
+    # 1. Get basic fact-check record from database
+    result = await db.execute(
+        select(ArticleFactCheck).where(ArticleFactCheck.article_id == article_id)
+    )
+    fact_check = result.scalar_one_or_none()
+
+    if not fact_check:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No fact-check found for this article",
+        )
+
+    # 2. Fetch detailed results from Railway API using job_id
+    fact_check_repo = FactCheckRepository(db)
+    article_repo = ArticleRepository(db)
+    service = FactCheckService(fact_check_repo, article_repo)
+
+    try:
+        # This fetches the FULL validation_results with sources and evidence
+        detailed_results = await service.get_detailed_fact_check_results(fact_check.job_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Failed to fetch detailed results from Railway API: {str(e)}",
+        )
+
+    # 3. Parse and structure the detailed results
+    validation_results = detailed_results.get("validation_results", {})
+    claims_data = validation_results.get("claims", [])
+
+    # 4. Build detailed claim analysis with all evidence
+    detailed_claims = []
+    for idx, claim_item in enumerate(claims_data):
+        claim = claim_item.get("claim", {})
+        validation_result = claim_item.get("validation_result", {})
+
+        # Extract references (sources)
+        references = []
+        for ref in validation_result.get("references", []):
+            references.append(
+                SourceReference(
+                    citation_id=ref.get("citation_id"),
+                    title=ref.get("title"),
+                    url=ref.get("url"),
+                    source=ref.get("source"),
+                    credibility=ref.get("credibility"),
+                    relevance_score=ref.get("relevance_score"),
+                    published_date=ref.get("published_date"),
+                )
+            )
+
+        # Extract key evidence
+        evidence_data = validation_result.get("key_evidence", {})
+        key_evidence = KeyEvidence(
+            supporting=evidence_data.get("supporting", []),
+            contradicting=evidence_data.get("contradicting", []),
+            context=evidence_data.get("context", []),
+        )
+
+        # Build claim analysis
+        claim_analysis = ClaimAnalysis(
+            claim_text=claim.get("claim"),
+            claim_index=idx,
+            category=claim.get("category"),
+            risk_level=claim.get("risk_level"),
+            verdict=validation_result.get("verdict"),
+            confidence=validation_result.get("confidence"),
+            summary=validation_result.get("summary"),
+            key_evidence=key_evidence,
+            references=references,
+            evidence_count=validation_result.get("evidence_count"),
+            evidence_breakdown=validation_result.get("evidence_breakdown", {}),
+            validation_mode=validation_result.get("validation_mode"),
+        )
+        detailed_claims.append(claim_analysis)
+
+    # 5. Calculate total unique sources
+    all_sources = set()
+    for claim in detailed_claims:
+        for ref in claim.references:
+            all_sources.add(ref.url)
+
+    # 6. Build complete response
+    return DetailedFactCheckResponse(
+        id=fact_check.id,
+        article_id=fact_check.article_id,
+        job_id=fact_check.job_id,
+        verdict=fact_check.verdict,
+        credibility_score=fact_check.credibility_score,
+        confidence=fact_check.confidence,
+        summary=fact_check.summary,
+        claims_analyzed=fact_check.claims_analyzed,
+        claims_validated=fact_check.claims_validated,
+        claims_true=fact_check.claims_true,
+        claims_false=fact_check.claims_false,
+        claims_misleading=fact_check.claims_misleading,
+        claims_unverified=fact_check.claims_unverified,
+        claims=detailed_claims,
+        total_sources=len(all_sources),
+        source_consensus=fact_check.source_consensus,
+        validation_mode=fact_check.validation_mode,
+        processing_time_seconds=fact_check.processing_time_seconds,
+        api_costs=fact_check.api_costs,
+        fact_checked_at=fact_check.fact_checked_at.isoformat(),
+    )
+
+
+@router.get(
+    "/articles/{article_id}/fact-check/claims",
+    response_model=ClaimListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List all claims in article (lightweight)",
+    description="""
+    Get a lightweight list of all claims analyzed in the article.
+    
+    This endpoint returns basic claim information WITHOUT fetching
+    full evidence and sources. Use this for:
+    - Overview of claims
+    - Navigation UI
+    - Quick claim count
+    
+    To get full details for a specific claim, use the detailed endpoint.
+    """,
+)
+async def list_article_claims(
+    article_id: UUID, db: AsyncSession = Depends(get_db)
+) -> ClaimListResponse:
+    """
+    List all claims for an article with basic info.
+    
+    Args:
+        article_id: UUID of the article
+        db: Database session
+        
+    Returns:
+        Simplified claim list with verdicts and evidence counts
+    """
+    result = await db.execute(
+        select(ArticleFactCheck).where(ArticleFactCheck.article_id == article_id)
+    )
+    fact_check = result.scalar_one_or_none()
+
+    if not fact_check:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No fact-check found for this article",
+        )
+
+    # Extract basic claim info from stored validation_results
+    validation_results = fact_check.validation_results
+    claims_data = []
+
+    if isinstance(validation_results, dict):
+        claims_list = validation_results.get("claims", [])
+
+        for idx, claim_item in enumerate(claims_list):
+            claim = claim_item.get("claim", {})
+            validation = claim_item.get("validation_result", {})
+
+            claims_data.append(
+                {
+                    "claim_index": idx,
+                    "claim_text": claim.get("claim"),
+                    "category": claim.get("category"),
+                    "risk_level": claim.get("risk_level"),
+                    "verdict": validation.get("verdict"),
+                    "confidence": validation.get("confidence"),
+                    "evidence_count": validation.get("evidence_count"),
+                }
+            )
+
+    return ClaimListResponse(
+        article_id=article_id, total_claims=len(claims_data), claims=claims_data
     )

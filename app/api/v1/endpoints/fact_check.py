@@ -385,10 +385,18 @@ async def list_article_claims(
     validation_results = fact_check.validation_results
     claims_data = []
 
-    if isinstance(validation_results, dict):
+    # Handle both storage formats (same normalization as standard endpoint)
+    if isinstance(validation_results, list):
+        # Raw Railway API format: validation_results is a list of claims
+        claims_list = validation_results
+    elif isinstance(validation_results, dict):
+        # Normalized format: validation_results has 'claims' key
         claims_list = validation_results.get("claims", [])
+    else:
+        # Fallback for unexpected formats
+        claims_list = []
 
-        for idx, claim_item in enumerate(claims_list):
+    for idx, claim_item in enumerate(claims_list):
             claim = claim_item.get("claim", {})
             validation = claim_item.get("validation_result", {})
 

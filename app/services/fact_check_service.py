@@ -170,10 +170,13 @@ class FactCheckService(BaseService):
                             fact_check.id, db_data
                         )
 
-                        # Update article credibility score
+                        # Update article credibility score and crawled content
                         await self._update_article_credibility(
                             fact_check.article_id, db_data["credibility_score"]
                         )
+                        
+                        # Update article with crawled content from Railway API
+                        await self._update_article_content(fact_check.article_id, result)
 
                         return updated_fact_check
 
@@ -361,4 +364,34 @@ class FactCheckService(BaseService):
                     )
         except Exception as e:
             logger.error(f"Failed to update article fact-check fields: {e}")
+            # Non-critical error, don't raise
+    
+    async def _update_article_content(self, article_id: UUID, api_result: dict):
+        """
+        Update article's content field with crawled text from Railway API.
+        
+        Args:
+            article_id: Article UUID
+            api_result: Complete API response from Railway
+        """
+        try:
+            crawled_content = api_result.get("crawled_content", "")
+            
+            if crawled_content:
+                article = await self.article_repo.get_article_by_id(article_id)
+                if article:
+                    # Update article content with full crawled text
+                    article.content = crawled_content
+                    # Commit the changes to database
+                    await self.article_repo.db.commit()
+                    
+                    logger.info(
+                        f"Updated article {article_id} with crawled content: "
+                        f"{len(crawled_content)} characters"
+                    )
+            else:
+                logger.debug(f"No crawled_content available for article {article_id}")
+                
+        except Exception as e:
+            logger.error(f"Failed to update article content: {e}")
             # Non-critical error, don't raise

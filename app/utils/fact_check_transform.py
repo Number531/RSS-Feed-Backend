@@ -126,10 +126,11 @@ def calculate_verdict_counts(validation_results: List[Dict[str, Any]]) -> Dict[s
 
 def extract_references_and_evidence(api_result: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Extract references and key_evidence from article_data in Railway API response.
+    Extract references, key_evidence, and crawled_content from Railway API response.
     
-    The Railway API stores full citation data in article_data.references and
-    article_data.key_evidence, not in validation_results.
+    The Railway API stores:
+    - Full citation data in article_data.references and article_data.key_evidence
+    - Full article text in crawled_content (top-level field)
     
     Args:
         api_result: Complete API response from Railway
@@ -137,7 +138,8 @@ def extract_references_and_evidence(api_result: Dict[str, Any]) -> Dict[str, Any
     Returns:
         dict: {
             "references": List of citation dicts,
-            "key_evidence": Dict with supporting/contradicting/context arrays
+            "key_evidence": Dict with supporting/contradicting/context arrays,
+            "crawled_content": Full article text (string)
         }
     """
     article_data = api_result.get("article_data", {})
@@ -159,9 +161,13 @@ def extract_references_and_evidence(api_result: Dict[str, Any]) -> Dict[str, Any
         claims_panel = sidebar.get("high_risk_claims_panel", {})
         key_evidence = claims_panel.get("key_evidence", {})
     
+    # Extract crawled_content from top-level API response
+    crawled_content = api_result.get("crawled_content", "")
+    
     return {
         "references": references,
-        "key_evidence": key_evidence
+        "key_evidence": key_evidence,
+        "crawled_content": crawled_content
     }
 
 

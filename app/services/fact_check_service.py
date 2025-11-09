@@ -380,8 +380,8 @@ class FactCheckService(BaseService):
             if crawled_content:
                 article = await self.article_repo.get_article_by_id(article_id)
                 if article:
-                    # Update article content with full crawled text
-                    article.content = crawled_content
+                    # Update article crawled_content with full text from Railway API
+                    article.crawled_content = crawled_content
                     # Commit the changes to database
                     await self.article_repo.db.commit()
                     

@@ -52,6 +52,9 @@ class ArticleResponse(ArticleBase):
     # User interaction (if authenticated)
     user_vote: Optional[int] = None  # -1, 0, or 1
 
+    # Full article content (from Railway API crawling)
+    crawled_content: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -3,7 +3,7 @@ Article schemas for API validation.
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -54,7 +54,7 @@ class ArticleResponse(ArticleBase):
 
     # Full article content (from Railway API)
     crawled_content: Optional[str] = None  # Raw scraped content
-    article_text: Optional[str] = None  # Clean Railway-generated content
+    article_data: Optional[Dict[str, Any]] = None  # Structured Railway article data (JSON)
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import ARRAY, DECIMAL, Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -37,7 +37,7 @@ class Article(Base):
     description = Column(Text, nullable=True)
     content = Column(Text, nullable=True)  # RSS feed description/summary
     crawled_content = Column(Text, nullable=True)  # Raw scraped content from Railway API
-    article_text = Column(Text, nullable=True)  # Clean Railway-generated article content
+    article_data = Column(JSONB, nullable=True)  # Structured Railway article data (JSON)
 
     # Metadata
     author = Column(String(255), nullable=True)

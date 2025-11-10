@@ -368,7 +368,7 @@ class FactCheckService(BaseService):
     
     async def _update_article_content(self, article_id: UUID, api_result: dict):
         """
-        Update article's content fields with text from Railway API.
+        Update article's content fields with data from Railway API.
         
         Args:
             article_id: Article UUID
@@ -376,23 +376,24 @@ class FactCheckService(BaseService):
         """
         try:
             crawled_content = api_result.get("crawled_content", "")
-            article_text = api_result.get("article_text", "")
+            article_data = api_result.get("article_data", {})
             
-            if crawled_content or article_text:
+            if crawled_content or article_data:
                 article = await self.article_repo.get_article_by_id(article_id)
                 if article:
-                    # Update article with both raw and clean content from Railway API
+                    # Update article with raw content and structured data from Railway API
                     if crawled_content:
                         article.crawled_content = crawled_content
-                    if article_text:
-                        article.article_text = article_text
+                    if article_data:
+                        article.article_data = article_data
                     
                     # Commit the changes to database
                     await self.article_repo.db.commit()
                     
+                    data_size = len(str(article_data)) if article_data else 0
                     logger.info(
                         f"Updated article {article_id} with content: "
-                        f"crawled={len(crawled_content)} chars, article_text={len(article_text)} chars"
+                        f"crawled={len(crawled_content)} chars, article_data={data_size} bytes"
                     )
             else:
                 logger.debug(f"No content available for article {article_id}")

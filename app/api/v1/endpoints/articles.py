@@ -296,7 +296,7 @@ async def get_article_full(
             "comment_count": article.comment_count,
             "tags": article.tags or [],
             "crawled_content": article.crawled_content,
-            "article_text": article.article_text,
+            "article_data": article.article_data,
         },
         "user_vote": user_vote or getattr(article, "user_vote", None),
         "comments": comments,

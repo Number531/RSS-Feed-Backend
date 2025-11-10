@@ -36,7 +36,8 @@ class Article(Base):
     )  # SHA-256 hash for deduplication
     description = Column(Text, nullable=True)
     content = Column(Text, nullable=True)  # RSS feed description/summary
-    crawled_content = Column(Text, nullable=True)  # Full article text from Railway API
+    crawled_content = Column(Text, nullable=True)  # Raw scraped content from Railway API
+    article_text = Column(Text, nullable=True)  # Clean Railway-generated article content
 
     # Metadata
     author = Column(String(255), nullable=True)

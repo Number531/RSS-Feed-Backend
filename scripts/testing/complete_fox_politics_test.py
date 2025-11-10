@@ -364,10 +364,13 @@ async def step_4_poll_for_completion(submitted_jobs: List[Dict[str, Any]], max_w
                                     article.fact_check_verdict = updated_fact_check.verdict
                                     article.fact_checked_at = updated_fact_check.fact_checked_at
                                     
-                                    # Update article with crawled content from Railway API
+                                    # Update article with content from Railway API
                                     crawled_content = result.get("crawled_content", "")
+                                    article_text = result.get("article_text", "")
                                     if crawled_content:
                                         article.crawled_content = crawled_content
+                                    if article_text:
+                                        article.article_text = article_text
                                 
                                 # Commit all changes
                                 await session.commit()

@@ -368,7 +368,7 @@ class FactCheckService(BaseService):
     
     async def _update_article_content(self, article_id: UUID, api_result: dict):
         """
-        Update article's content field with crawled text from Railway API.
+        Update article's content fields with text from Railway API.
         
         Args:
             article_id: Article UUID
@@ -376,21 +376,26 @@ class FactCheckService(BaseService):
         """
         try:
             crawled_content = api_result.get("crawled_content", "")
+            article_text = api_result.get("article_text", "")
             
-            if crawled_content:
+            if crawled_content or article_text:
                 article = await self.article_repo.get_article_by_id(article_id)
                 if article:
-                    # Update article crawled_content with full text from Railway API
-                    article.crawled_content = crawled_content
+                    # Update article with both raw and clean content from Railway API
+                    if crawled_content:
+                        article.crawled_content = crawled_content
+                    if article_text:
+                        article.article_text = article_text
+                    
                     # Commit the changes to database
                     await self.article_repo.db.commit()
                     
                     logger.info(
-                        f"Updated article {article_id} with crawled content: "
-                        f"{len(crawled_content)} characters"
+                        f"Updated article {article_id} with content: "
+                        f"crawled={len(crawled_content)} chars, article_text={len(article_text)} chars"
                     )
             else:
-                logger.debug(f"No crawled_content available for article {article_id}")
+                logger.debug(f"No content available for article {article_id}")
                 
         except Exception as e:
             logger.error(f"Failed to update article content: {e}")

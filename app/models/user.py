@@ -75,6 +75,18 @@ class User(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    received_mentions = relationship(
+        "CommentMention",
+        foreign_keys="CommentMention.mentioned_user_id",
+        back_populates="mentioned_user",
+        cascade="all, delete-orphan",
+    )
+    made_mentions = relationship(
+        "CommentMention",
+        foreign_keys="CommentMention.mentioned_by_user_id",
+        back_populates="mentioned_by",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"

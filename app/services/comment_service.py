@@ -9,11 +9,15 @@ permissions and validation.
 from typing import List, Optional
 from uuid import UUID
 
+from sqlalchemy import select
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.models.comment import Comment
+from app.models.comment_mention import CommentMention
+from app.models.user import User
 from app.repositories.article_repository import ArticleRepository
 from app.repositories.comment_repository import CommentRepository
 from app.services.base_service import BaseService
+from app.utils.mention_parser import parse_mentions
 
 
 class CommentService(BaseService):
@@ -131,6 +135,9 @@ class CommentService(BaseService):
                     except Exception as e:
                         self.logger.warning(f"Failed to create reply notification: {e}")
 
+            # Handle @mentions in comment content
+            await self._process_mentions(comment, user_id, article_id, content)
+
             return comment
 
         except (ValidationError, NotFoundError):
@@ -138,6 +145,70 @@ class CommentService(BaseService):
         except Exception as e:
             self.log_error("create_comment", e, user_id=user_id)
             raise
+
+    async def _process_mentions(
+        self, comment: Comment, author_id: UUID, article_id: UUID, content: str
+    ) -> None:
+        """
+        Process @mentions in comment content and create mention records + notifications.
+        
+        Args:
+            comment: The created comment
+            author_id: User who created the comment
+            article_id: Article the comment belongs to
+            content: Comment text content
+        """
+        try:
+            # Parse mentions from content
+            mentioned_usernames = parse_mentions(content)
+            
+            if not mentioned_usernames:
+                return
+            
+            # Get database session from repository
+            db_session = self.comment_repo.db
+            
+            # Look up mentioned users by username
+            result = await db_session.execute(
+                select(User).where(User.username.in_(mentioned_usernames))
+            )
+            mentioned_users = result.scalars().all()
+            
+            # Create CommentMention records
+            for user in mentioned_users:
+                # Don't create mention if user mentions themselves
+                if user.id == author_id:
+                    continue
+                
+                # Create mention record
+                mention = CommentMention(
+                    comment_id=comment.id,
+                    mentioned_user_id=user.id,
+                    mentioned_by_user_id=author_id
+                )
+                db_session.add(mention)
+                
+                # Create notification for the mentioned user
+                try:
+                    from app.services.notification_service import NotificationService
+                    
+                    await NotificationService.create_mention_notification(
+                        db=db_session,
+                        recipient_id=user.id,
+                        actor_id=author_id,
+                        comment_id=comment.id,
+                        article_id=article_id
+                    )
+                except Exception as e:
+                    self.logger.warning(f"Failed to create mention notification for {user.username}: {e}")
+            
+            # Commit mention records
+            await db_session.commit()
+            self.logger.info(f"Processed {len(mentioned_users)} mentions in comment {comment.id}")
+            
+        except Exception as e:
+            self.logger.error(f"Error processing mentions: {e}")
+            # Don't fail comment creation if mention processing fails
 
     async def get_article_comments(
         self, article_id: UUID, page: int = 1, page_size: int = 50

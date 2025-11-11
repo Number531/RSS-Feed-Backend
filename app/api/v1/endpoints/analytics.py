@@ -16,6 +16,7 @@ from app.db.session import get_db
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.services.analytics_service import AnalyticsService
 from app.services.article_analytics_service import ArticleAnalyticsService
+from app.services.content_quality_service import ContentQualityService
 from app.schemas.analytics import (
     AggregateStatsResponse,
     CategoryAnalyticsResponse,
@@ -733,4 +734,76 @@ async def get_article_performance(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve analytics: {str(e)}",
+        )
+
+
+# === Content Quality Analytics ===
+
+
+@router.get(
+    "/content-quality",
+    summary="Get content quality report",
+    description="""
+    Generate a comprehensive content quality analysis across articles.
+    
+    **Metrics Included:**
+    - Quality scores (0-100) based on engagement and sentiment
+    - Vote ratios and controversy scores
+    - Comment and bookmark metrics
+    - Aggregate statistics (averages, medians, distributions)
+    - Top performing articles
+    - Actionable recommendations
+    
+    **Quality Score Calculation:**
+    - Vote Ratio (35%): Positive sentiment indicator
+    - Comments (25%): Discussion engagement quality
+    - Bookmarks (20%): Long-term value assessment
+    - Total Votes (15%): Overall engagement
+    - Controversy Penalty (5%): Polarization reduction
+    
+    **Use Cases:**
+    - Content strategy planning
+    - Editorial quality monitoring
+    - Source evaluation and optimization
+    - Performance benchmarking
+    
+    **Parameters:**
+    - `days`: Analysis period (1-365 days, default 7)
+    - `category`: Optional category filter
+    - `min_engagement`: Minimum total engagement (votes+comments+bookmarks, default 5)
+    
+    **Response Includes:**
+    - Quality metrics (avg/median scores, distributions)
+    - Top 10 performing articles
+    - Category-specific insights
+    - Engagement pattern analysis
+    - Strategic recommendations
+    """,
+    responses={
+        200: {"description": "Quality report generated successfully"},
+        400: {"description": "Invalid parameters"},
+        500: {"description": "Internal server error"},
+    },
+    tags=["analytics"],
+)
+async def get_content_quality_report(
+    days: int = Query(7, ge=1, le=365, description="Number of days to analyze"),
+    category: Optional[str] = Query(None, description="Filter by article category"),
+    min_engagement: int = Query(5, ge=1, le=100, description="Minimum engagement threshold"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get content quality report."""
+    try:
+        service = ContentQualityService(db)
+        report = await service.get_quality_report(
+            days=days,
+            category=category,
+            min_engagement=min_engagement
+        )
+        return report
+    except Exception as e:
+        logger.error(f"Error generating content quality report: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate quality report: {str(e)}",
         )

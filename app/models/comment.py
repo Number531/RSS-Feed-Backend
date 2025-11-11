@@ -54,3 +54,4 @@ class Comment(Base):
     article = relationship("Article", back_populates="comments")
     user = relationship("User", back_populates="comments")
     votes = relationship("Vote", back_populates="comment", foreign_keys="Vote.comment_id")
+    mentions = relationship("CommentMention", back_populates="comment", foreign_keys="CommentMention.comment_id")

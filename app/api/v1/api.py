@@ -8,11 +8,13 @@ from app.api.v1.endpoints import (
     articles,
     auth,
     bookmarks,
+    cache,
     comments,
     fact_check,
     health,
     notifications,
     reading_history,
+    reputation,
     rss_feeds,
     search,
     users,
@@ -40,3 +42,5 @@ api_router.include_router(notifications.router, prefix="/notifications", tags=["
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(health.router, tags=["health"])
+api_router.include_router(reputation.router, prefix="/reputation", tags=["reputation"])
+api_router.include_router(cache.router, prefix="/cache", tags=["cache"])

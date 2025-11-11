@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     bookmarks,
     comments,
     fact_check,
+    health,
     notifications,
     reading_history,
     rss_feeds,
@@ -38,3 +39,4 @@ api_router.include_router(
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(health.router, tags=["health"])

@@ -15,6 +15,7 @@ from app.core.exceptions import ValidationError
 from app.db.session import get_db
 from app.repositories.analytics_repository import AnalyticsRepository
 from app.services.analytics_service import AnalyticsService
+from app.services.article_analytics_service import ArticleAnalyticsService
 from app.schemas.analytics import (
     AggregateStatsResponse,
     CategoryAnalyticsResponse,
@@ -686,4 +687,50 @@ async def get_risk_correlation(
         logger.error(f"Error retrieving risk correlation: {e}")
         raise HTTPException(
             status_code=500, detail="Failed to retrieve risk correlation"
+        )
+
+
+# === Article Performance Analytics ===
+
+
+@router.get(
+    "/articles/{article_id}/performance",
+    summary="Get article performance metrics",
+    description="""
+    Get comprehensive performance analytics for a specific article.
+    
+    **Metrics Included:**
+    - View counts (total, unique, by source)
+    - Engagement metrics (read time, scroll depth, completion rate)
+    - Social metrics (votes, comments, bookmarks, shares)
+    - Trending score and performance percentile
+    
+    **Authentication**: Optional (public stats available)
+    
+    **Cache**: Results cached for 5 minutes
+    """,
+    responses={
+        200: {"description": "Article analytics retrieved successfully"},
+        404: {"description": "Article not found"},
+        500: {"description": "Internal server error"},
+    },
+    tags=["analytics"],
+)
+async def get_article_performance(
+    article_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get article performance analytics."""
+    try:
+        service = ArticleAnalyticsService(db)
+        from uuid import UUID
+        analytics = await service.get_article_analytics(UUID(article_id))
+        return analytics
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error retrieving article analytics for {article_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve analytics: {str(e)}",
         )

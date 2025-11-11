@@ -83,6 +83,9 @@ class Article(Base):
     fact_check = relationship(
         "ArticleFactCheck", back_populates="article", uselist=False, cascade="all, delete-orphan"
     )
+    analytics = relationship(
+        "ArticleAnalytics", back_populates="article", uselist=False, cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Article(title='{self.title[:50]}...', source='{self.rss_source_id}')>"

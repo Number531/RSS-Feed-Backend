@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_admin_user, get_current_user
+from app.core.security import get_current_admin_user, get_current_user, get_current_user_optional
 from app.db.session import get_db
 from app.models.user import User
 from app.repositories.rss_source_repository import RSSSourceRepository
@@ -35,16 +35,22 @@ async def list_feeds(
     category: Optional[str] = Query(None, description="Filter by category"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     service: RSSSourceService = Depends(get_rss_source_service),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Get list of RSS feeds with pagination.
 
+    **Public endpoint** - Authentication optional.
+
     - **page**: Page number (1-indexed)
     - **page_size**: Number of items per page (max 100)
     - **category**: Optional filter by category
-    - **is_active**: Optional filter by active status
+    - **is_active**: Optional filter by active status (defaults to true for unauthenticated users)
     """
+    # Default to showing only active feeds for unauthenticated users
+    if current_user is None and is_active is None:
+        is_active = True
+    
     return await service.get_all_sources(
         page=page, page_size=page_size, category=category, is_active=is_active
     )
@@ -53,10 +59,12 @@ async def list_feeds(
 @router.get("/categories", response_model=list[RSSCategoryResponse])
 async def list_categories(
     service: RSSSourceService = Depends(get_rss_source_service),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Get list of RSS feed categories with statistics.
+
+    **Public endpoint** - Authentication optional.
 
     Returns:
     - Category name
@@ -131,10 +139,12 @@ async def get_subscribed_feed_ids(
 async def get_feed(
     feed_id: UUID,
     service: RSSSourceService = Depends(get_rss_source_service),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Get detailed information about a specific RSS feed.
+
+    **Public endpoint** - Authentication optional.
 
     - **feed_id**: UUID of the feed
     """

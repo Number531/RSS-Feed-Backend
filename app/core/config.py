@@ -102,9 +102,11 @@ class Settings(BaseSettings):
     # Fact-Check API Settings
     FACT_CHECK_API_URL: str = "https://fact-check-production.up.railway.app"
     FACT_CHECK_ENABLED: bool = True
-    FACT_CHECK_MODE: str = "summary"  # standard, thorough, or summary
+    FACT_CHECK_MODE: str = "summary"  # standard, thorough, summary, or synthesis
     FACT_CHECK_POLL_INTERVAL: int = 5  # seconds between status polls
-    FACT_CHECK_MAX_POLL_ATTEMPTS: int = 60  # max polling attempts (5 minutes at 5s intervals)
+    FACT_CHECK_MAX_POLL_ATTEMPTS: int = 180  # max polling attempts (15 minutes at 5s intervals)
+    # Note: Synthesis mode requires 4-7 minutes, thorough 5-10 minutes, standard ~1 minute
+    # 180 attempts × 5s = 900s (15 min) accommodates all modes with buffer
     FACT_CHECK_MAX_WAIT: int = (
         120  # maximum wait time (2 minutes) - DEPRECATED, use MAX_POLL_ATTEMPTS
     )

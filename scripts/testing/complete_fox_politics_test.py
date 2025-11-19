@@ -41,6 +41,7 @@ from app.core.config import settings
 from app.models.article import Article
 from app.models.rss_source import RSSSource
 from app.models.fact_check import ArticleFactCheck
+from app.models.article_analytics import ArticleAnalytics  # Fix relationship error
 from app.services.fact_check_service import FactCheckService
 from app.repositories.fact_check_repository import FactCheckRepository
 from app.repositories.article_repository import ArticleRepository

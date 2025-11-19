@@ -39,6 +39,14 @@ class Article(Base):
     crawled_content = Column(Text, nullable=True)  # Raw scraped content from Railway API
     article_data = Column(JSONB, nullable=True)  # Structured Railway article data (JSON)
 
+    # Synthesis mode content (1,400-2,500 word narrative article)
+    synthesis_article = Column(
+        Text,
+        nullable=True,
+        comment="Full markdown article from synthesis fact-check mode. "
+                "Contains 1,400-2,500 word narrative with embedded citations."
+    )
+
     # Metadata
     author = Column(String(255), nullable=True)
     published_date = Column(DateTime(timezone=True), nullable=True, index=True)

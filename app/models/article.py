@@ -5,7 +5,7 @@ Article model for storing aggregated news articles.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ARRAY, DECIMAL, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import ARRAY, Boolean, DECIMAL, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import relationship
 
@@ -68,6 +68,25 @@ class Article(Base):
     fact_check_score = Column(Integer, nullable=True, index=True)
     fact_check_verdict = Column(String(50), nullable=True, index=True)
     fact_checked_at = Column(DateTime(timezone=True), nullable=True, index=True)
+
+    # Frontend helper columns (Phase 2 - added 2025-11-19)
+    has_synthesis = Column(Boolean, nullable=True, index=True)
+    synthesis_preview = Column(Text, nullable=True)
+    synthesis_word_count = Column(Integer, nullable=True)
+    has_context_emphasis = Column(Boolean, nullable=True)
+    has_timeline = Column(Boolean, nullable=True)
+
+    # Metadata enrichment (Phase 3 - added 2025-11-19)
+    timeline_event_count = Column(Integer, nullable=True)
+    reference_count = Column(Integer, nullable=True)
+    margin_note_count = Column(Integer, nullable=True)
+    fact_check_mode = Column(String(20), nullable=True, index=True)
+    fact_check_processing_time = Column(Integer, nullable=True)
+    synthesis_generated_at = Column(DateTime(timezone=True), nullable=True, index=True)
+
+    # UX enhancements (Phase 4 - added 2025-11-19)
+    synthesis_read_minutes = Column(Integer, nullable=True)
+    verdict_color = Column(String(20), nullable=True, index=True)
 
     # Full-text search vector
     search_vector = Column(TSVECTOR, nullable=True)

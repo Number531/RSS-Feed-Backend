@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     reputation,
     rss_feeds,
     search,
+    synthesis,
     users,
     votes,
 )
@@ -30,6 +31,7 @@ api_router.include_router(rss_feeds.router)  # Already has prefix and tags in ro
 api_router.include_router(votes.router, prefix="/votes", tags=["votes"])
 api_router.include_router(comments.router, prefix="/comments", tags=["comments"])
 api_router.include_router(articles.router, prefix="/articles", tags=["articles"])
+api_router.include_router(synthesis.router, prefix="/articles", tags=["synthesis"])
 api_router.include_router(
     fact_check.router, tags=["fact-check"]
 )  # Uses /articles/{article_id}/fact-check

@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     reputation,
     rss_feeds,
     search,
+    seed_synthesis,
     synthesis,
     users,
     votes,
@@ -30,8 +31,10 @@ api_router.include_router(search.router, tags=["search"])  # Search & discovery 
 api_router.include_router(rss_feeds.router)  # Already has prefix and tags in router definition
 api_router.include_router(votes.router, prefix="/votes", tags=["votes"])
 api_router.include_router(comments.router, prefix="/comments", tags=["comments"])
-api_router.include_router(articles.router, prefix="/articles", tags=["articles"])
+# IMPORTANT: synthesis router MUST come before articles router to avoid route conflicts
+# The articles router has a catch-all /{article_id} route that would match /synthesis
 api_router.include_router(synthesis.router, prefix="/articles", tags=["synthesis"])
+api_router.include_router(articles.router, prefix="/articles", tags=["articles"])
 api_router.include_router(
     fact_check.router, tags=["fact-check"]
 )  # Uses /articles/{article_id}/fact-check
@@ -46,3 +49,5 @@ api_router.include_router(analytics.router, prefix="/analytics", tags=["analytic
 api_router.include_router(health.router, tags=["health"])
 api_router.include_router(reputation.router, prefix="/reputation", tags=["reputation"])
 api_router.include_router(cache.router, prefix="/cache", tags=["cache"])
+# Development/testing endpoints
+api_router.include_router(seed_synthesis.router, prefix="/dev", tags=["development"])

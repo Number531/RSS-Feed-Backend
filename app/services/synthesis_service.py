@@ -5,7 +5,7 @@ Handles queries for synthesis mode articles with optimized joins.
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -220,10 +220,11 @@ class SynthesisService:
             Dict with aggregate metrics
         """
         # Main stats query
+        # Use CASE WHEN for Boolean to Integer conversion (PostgreSQL compatible)
         stats_query = select(
             func.count(Article.id).label("total"),
-            func.sum(func.cast(Article.has_timeline, func.Integer())).label("with_timeline"),
-            func.sum(func.cast(Article.has_context_emphasis, func.Integer())).label("with_context"),
+            func.sum(case((Article.has_timeline == True, 1), else_=0)).label("with_timeline"),
+            func.sum(case((Article.has_context_emphasis == True, 1), else_=0)).label("with_context"),
             func.avg(Article.fact_check_score).label("avg_score"),
             func.avg(Article.synthesis_word_count).label("avg_words"),
             func.avg(Article.synthesis_read_minutes).label("avg_minutes")
@@ -249,15 +250,15 @@ class SynthesisService:
         # Build verdict distribution dict
         verdict_distribution = {row.fact_check_verdict: row.count for row in verdict_rows}
         
-        # Calculate averages with defaults
-        total = stats.total or 0
-        with_timeline = int(stats.with_timeline or 0)
-        with_context = int(stats.with_context or 0)
-        avg_score = float(stats.avg_score or 0)
-        avg_words = int(stats.avg_words or 0)
-        avg_minutes = int(stats.avg_minutes or 0)
+        # Calculate averages with defaults (handle None gracefully)
+        total = int(stats.total) if stats.total is not None else 0
+        with_timeline = int(stats.with_timeline) if stats.with_timeline is not None else 0
+        with_context = int(stats.with_context) if stats.with_context is not None else 0
+        avg_score = float(stats.avg_score) if stats.avg_score is not None else 0.0
+        avg_words = int(stats.avg_words) if stats.avg_words is not None else 0
+        avg_minutes = int(stats.avg_minutes) if stats.avg_minutes is not None else 0
         
-        # Convert score to 0-1 range for average_credibility
+        # Convert score to 0-1 range for average_credibility (fact_check_score is 0-100)
         average_credibility = avg_score / 100.0 if avg_score > 0 else 0.0
         
         return {

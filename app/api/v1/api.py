@@ -26,6 +26,7 @@ from app.api.v1.endpoints import (
 api_router = APIRouter()
 
 # Include all endpoint routers
+api_router.include_router(seed_synthesis.router, prefix="/dev", tags=["development"])
 api_router.include_router(auth.router, prefix="/auth", tags=["authentication"])
 api_router.include_router(search.router, tags=["search"])  # Search & discovery endpoints
 api_router.include_router(rss_feeds.router)  # Already has prefix and tags in router definition
@@ -49,5 +50,3 @@ api_router.include_router(analytics.router, prefix="/analytics", tags=["analytic
 api_router.include_router(health.router, tags=["health"])
 api_router.include_router(reputation.router, prefix="/reputation", tags=["reputation"])
 api_router.include_router(cache.router, prefix="/cache", tags=["cache"])
-# Development/testing endpoints
-api_router.include_router(seed_synthesis.router, prefix="/dev", tags=["development"])

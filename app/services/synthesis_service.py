@@ -139,7 +139,7 @@ class SynthesisService:
         except ValueError:
             return None
         
-        # Query with join and JSONB extraction
+        # Query with join - fetch the full article object including article_data
         query = (
             select(
                 Article.id,
@@ -164,11 +164,7 @@ class SynthesisService:
                 Article.fact_check_mode,
                 Article.fact_check_processing_time,
                 Article.synthesis_generated_at,
-                # Extract JSONB arrays
-                Article.article_data["references"].label("references"),
-                Article.article_data["event_timeline"].label("event_timeline"),
-                Article.article_data["margin_notes"].label("margin_notes"),
-                Article.article_data["context_and_emphasis"].label("context_and_emphasis")
+                Article.article_data  # Fetch the whole JSONB object
             )
             .join(RSSSource, Article.rss_source_id == RSSSource.id)
             .where(Article.id == article_uuid)
@@ -180,6 +176,13 @@ class SynthesisService:
         
         if not row:
             return None
+        
+        # Extract JSONB arrays from article_data (in Python)
+        article_data = row.article_data or {}
+        references = article_data.get("references", [])
+        event_timeline = article_data.get("event_timeline", [])
+        margin_notes = article_data.get("margin_notes", [])
+        context_and_emphasis = article_data.get("context_and_emphasis", [])
         
         # Convert to dict with JSONB arrays
         return {
@@ -205,11 +208,11 @@ class SynthesisService:
             "fact_check_mode": row.fact_check_mode,
             "fact_check_processing_time": row.fact_check_processing_time,
             "synthesis_generated_at": row.synthesis_generated_at,
-            # JSONB arrays (default to empty list if NULL)
-            "references": row.references if row.references else [],
-            "event_timeline": row.event_timeline if row.event_timeline else [],
-            "margin_notes": row.margin_notes if row.margin_notes else [],
-            "context_and_emphasis": row.context_and_emphasis if row.context_and_emphasis else []
+            # JSONB arrays extracted from article_data
+            "references": references if references else [],
+            "event_timeline": event_timeline if event_timeline else [],
+            "margin_notes": margin_notes if margin_notes else [],
+            "context_and_emphasis": context_and_emphasis if context_and_emphasis else []
         }
     
     async def get_synthesis_stats(self) -> Dict[str, Any]:

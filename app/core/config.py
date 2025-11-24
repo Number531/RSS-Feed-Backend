@@ -115,6 +115,20 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 100
     RATE_LIMIT_UNAUTHENTICATED: int = 20
+    
+    # Email Settings
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM_EMAIL: str = "noreply@example.com"
+    SMTP_FROM_NAME: str = "RSS News Aggregator"
+    SMTP_USE_TLS: bool = True
+    
+    # Email Verification
+    EMAIL_VERIFICATION_REQUIRED: bool = False  # Set to True to enforce verification
+    FRONTEND_URL: str = "http://localhost:3000"  # For verification links
+    VERIFICATION_TOKEN_EXPIRE_HOURS: int = 1
 
     # Logging
     LOG_LEVEL: str = "INFO"

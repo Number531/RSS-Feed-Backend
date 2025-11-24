@@ -76,6 +76,9 @@ python-dotenv>=1.0.1
 pydantic[email]>=2.10.0
 pydantic-settings>=2.6.0
 
+# Rate limiting
+slowapi>=0.1.9
+
 # OAuth/JWT - CRITICAL SECURITY UPDATE
 # Fixed: JWE zip bomb DoS, JWS segment DoS, critical header bypass
 authlib>=1.6.5

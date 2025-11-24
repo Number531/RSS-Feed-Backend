@@ -109,6 +109,12 @@ from app.middleware.request_id import RequestIDMiddleware
 
 app.add_middleware(RequestIDMiddleware)
 
+# Add Rate Limit middleware (after Request ID)
+from app.middleware.rate_limit import limiter, RateLimitMiddleware
+
+app.state.limiter = limiter
+app.add_middleware(RateLimitMiddleware)
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,

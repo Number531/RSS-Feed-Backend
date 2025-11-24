@@ -6,7 +6,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com)
-[![Tests](https://img.shields.io/badge/tests-135+%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/tests-659%20passed-brightgreen.svg)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](./tests)
 [![Security](https://img.shields.io/badge/security-audited-success.svg)](./SECURITY_AUDIT_REPORT.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
@@ -30,8 +30,9 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 
 - **60 RESTful API Endpoints** - Comprehensive API coverage including search
 - **44 RSS News Sources** - Diverse feeds across 10 categories
-- **95% Test Coverage** - Robust testing with 146+ passing tests
-- **JWT Authentication** - Secure token-based auth with refresh
+- **659 Tests Passing** - Enterprise-grade test coverage (95%+)
+- **Enterprise Security** - Rate limiting, email verification, audit logging
+- **JWT Authentication** - Secure token-based auth with refresh tokens
 - **Reddit-Style Features** - Voting, comments, bookmarks
 - **Full-Text Search** - PostgreSQL-powered content discovery
 - **Real-Time Notifications** - WebSocket support
@@ -48,9 +49,13 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 <tr>
 <td width="50%">
 
-#### 🔐 Authentication & Users
+#### 🔐 Authentication & Security
 - JWT access & refresh tokens
 - Email/password authentication
+- **Email verification system**
+- **Rate limiting (3/min, 10/hour per IP)**
+- **Strong password requirements**
+- **Registration audit logging**
 - User profiles & preferences
 - Password reset flows
 
@@ -84,8 +89,9 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 
 - **Async Architecture** - Built on FastAPI for high performance
 - **PostgreSQL Database** - Robust data storage with Alembic migrations
-- **Redis Caching** - Fast data access and session management
+- **Redis Caching** - Fast data access, session management, and rate limiting
 - **Celery Workers** - Background task processing
+- **Enterprise Security** - Rate limiting, email verification, password strength, audit logging
 - **Monitoring Ready** - Prometheus metrics & Sentry integration
 - **CI/CD Pipelines** - Automated testing and deployment
 
@@ -97,7 +103,7 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 
 || Category | Endpoints | Description |
 ||----------|-----------|-------------|
-|| **Authentication** | 3 | Login, register, token refresh |
+|| **Authentication** | 5 | Login, register, email verification, token refresh |
 || **Users** | 4 | Profile management, preferences |
 || **Articles** | 3 | Feed, search, article details |
 || **Search & Discovery** | 3 | Full-text search, trending, popular articles |
@@ -122,6 +128,66 @@ Complete API reference with TypeScript types:
 - 📋 [Quick Reference Guide](./frontend-api-reference/01-API-QUICK-REFERENCE.md)
 - 🔷 [TypeScript Types](./frontend-api-reference/02-TYPESCRIPT-TYPES.md)
 - 📄 [OpenAPI Specification](./frontend-api-reference/03-OPENAPI-SPEC.md)
+
+---
+
+## 🔒 Security Features
+
+### Enterprise-Grade Registration Security
+
+Our user registration system implements multiple layers of security to protect against bot attacks, spam accounts, and unauthorized access:
+
+#### 🛡️ Rate Limiting
+- **Per-IP Rate Limits**: 3 registrations/minute, 10/hour
+- **Redis-Backed**: Fast, distributed rate limit tracking
+- **Proxy Support**: Handles X-Forwarded-For and X-Real-IP headers
+- **Graceful Degradation**: Falls back safely if Redis is unavailable
+
+#### 🔐 Strong Password Requirements
+- Minimum 8 characters
+- At least 1 uppercase letter
+- At least 1 lowercase letter
+- At least 1 digit
+- At least 1 special character
+- Blocks 17+ common weak passwords ("password", "12345678", etc.)
+- Prevents username similarity in passwords
+
+#### 📧 Email Verification
+- **Secure Token System**: 32-byte URL-safe tokens
+- **Time-Limited**: 1-hour token expiration
+- **Redis Storage**: Fast token validation
+- **HTML + Text Emails**: Professional verification emails
+- **Resend Protection**: Rate limited to 3/hour
+- **Optional Mode**: Backward compatible (EMAIL_VERIFICATION_REQUIRED flag)
+
+#### 📊 Registration Audit Logging
+- **Complete Audit Trail**: Tracks all registration attempts (success + failure)
+- **IP Address Tracking**: Identify bot patterns and abuse
+- **User Agent Logging**: Detect automated registration attempts
+- **Failure Reason Capture**: Debug issues and analyze security incidents
+- **Database Storage**: Queryable audit logs with indexes
+- **Compliance Ready**: GDPR/SOC2 audit trail support
+
+### Additional Security Measures
+
+- **JWT Authentication**: Secure token-based auth with refresh tokens
+- **BCrypt Password Hashing**: Industry-standard password protection
+- **Atomic Transactions**: Prevent data inconsistency and orphaned records
+- **Race Condition Protection**: Database constraints + proper error handling
+- **CORS Configuration**: Controlled cross-origin access
+- **SQL Injection Protection**: SQLAlchemy ORM with parameterized queries
+
+### Security Test Coverage
+
+- ✅ **51 Security-Focused Tests**
+  - 26 tests for rate limiting & password validation
+  - 16 tests for email verification system
+  - 9 tests for service layer & audit logging
+- ✅ **Integration Tests** for race conditions
+- ✅ **Unit Tests** for all security components
+- ✅ **659 Total Tests** with 95% coverage
+
+For detailed security analysis, see [USER_REGISTRATION_ANALYSIS.md](./USER_REGISTRATION_ANALYSIS.md)
 
 ---
 

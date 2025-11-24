@@ -72,7 +72,7 @@ async def test_list_empty_database(self, client: AsyncClient, empty_database):
 async def test_list_pagination(self, client: AsyncClient, synthesis_articles):
         """Test pagination parameters."""
         # Page 1 with 2 items
-response = await client.get("/api/v1/articles/synthesis?page=1&page_size=2")
+        response = await client.get("/api/v1/articles/synthesis?page=1&page_size=2")
         assert response.status_code == 200
         data = response.json()
         
@@ -83,7 +83,7 @@ response = await client.get("/api/v1/articles/synthesis?page=1&page_size=2")
         assert data["has_next"] is True
         
         # Page 2 with 2 items
-response = await client.get("/api/v1/articles/synthesis?page=2&page_size=2")
+        response = await client.get("/api/v1/articles/synthesis?page=2&page_size=2")
         assert response.status_code == 200
         data = response.json()
         
@@ -93,7 +93,7 @@ response = await client.get("/api/v1/articles/synthesis?page=2&page_size=2")
     
 async def test_list_filter_by_verdict(self, client: AsyncClient, synthesis_articles):
         """Test filtering by fact_check_verdict."""
-response = await client.get("/api/v1/articles/synthesis?verdict=TRUE")
+        response = await client.get("/api/v1/articles/synthesis?verdict=TRUE")
         
         assert response.status_code == 200
         data = response.json()
@@ -105,7 +105,7 @@ response = await client.get("/api/v1/articles/synthesis?verdict=TRUE")
     
 async def test_list_sort_by_newest(self, client: AsyncClient, synthesis_articles):
         """Test sorting by newest (default)."""
-response = await client.get("/api/v1/articles/synthesis?sort_by=newest")
+        response = await client.get("/api/v1/articles/synthesis?sort_by=newest")
         
         assert response.status_code == 200
         data = response.json()
@@ -116,7 +116,7 @@ response = await client.get("/api/v1/articles/synthesis?sort_by=newest")
     
 async def test_list_sort_by_credibility(self, client: AsyncClient, synthesis_articles):
         """Test sorting by credibility score."""
-response = await client.get("/api/v1/articles/synthesis?sort_by=credibility")
+        response = await client.get("/api/v1/articles/synthesis?sort_by=credibility")
         
         assert response.status_code == 200
         data = response.json()
@@ -127,14 +127,14 @@ response = await client.get("/api/v1/articles/synthesis?sort_by=credibility")
     
 async def test_list_invalid_page(self, client: AsyncClient, synthesis_articles):
         """Test with invalid page number (should default to 1)."""
-response = await client.get("/api/v1/articles/synthesis?page=0")
+        response = await client.get("/api/v1/articles/synthesis?page=0")
         
         # Should accept but normalize to page 1
         assert response.status_code == 422  # Validation error from FastAPI
     
 async def test_list_page_size_too_large(self, client: AsyncClient, synthesis_articles):
         """Test page_size exceeding maximum."""
-response = await client.get("/api/v1/articles/synthesis?page_size=200")
+        response = await client.get("/api/v1/articles/synthesis?page_size=200")
         
         # Should be rejected by validation
         assert response.status_code == 422
@@ -150,7 +150,7 @@ async def test_get_existing_article(self, client: AsyncClient, synthesis_article
         # Use first synthesis article
         article_id = str(synthesis_articles[0].id)
         
-response = await client.get(f"/api/v1/articles/{article_id}/synthesis")
+        response = await client.get(f"/api/v1/articles/{article_id}/synthesis")
         
         assert response.status_code == 200
         data = response.json()
@@ -213,7 +213,7 @@ async def test_get_article_with_empty_jsonb(self, client: AsyncClient, synthesis
         # Use article with minimal data (article 4)
         article_id = str(synthesis_articles[3].id)
         
-response = await client.get(f"/api/v1/articles/{article_id}/synthesis")
+        response = await client.get(f"/api/v1/articles/{article_id}/synthesis")
         
         assert response.status_code == 200
         data = response.json()
@@ -230,7 +230,7 @@ async def test_get_nonexistent_article(self, client: AsyncClient):
         """Test getting an article that doesn't exist."""
         fake_uuid = "00000000-0000-0000-0000-000000000000"
         
-response = await client.get(f"/api/v1/articles/{fake_uuid}/synthesis")
+        response = await client.get(f"/api/v1/articles/{fake_uuid}/synthesis")
         
         assert response.status_code == 404
         data = response.json()
@@ -239,7 +239,7 @@ response = await client.get(f"/api/v1/articles/{fake_uuid}/synthesis")
     
 async def test_get_invalid_uuid(self, client: AsyncClient):
         """Test with invalid UUID format."""
-response = await client.get("/api/v1/articles/not-a-uuid/synthesis")
+        response = await client.get("/api/v1/articles/not-a-uuid/synthesis")
         
         # Should return 404 (UUID validation happens in service)
         assert response.status_code == 404
@@ -249,7 +249,7 @@ async def test_get_non_synthesis_article(self, client: AsyncClient, synthesis_ar
         # Article 5 has has_synthesis=False
         article_id = str(synthesis_articles[4].id)
         
-response = await client.get(f"/api/v1/articles/{article_id}/synthesis")
+        response = await client.get(f"/api/v1/articles/{article_id}/synthesis")
         
         assert response.status_code == 404
 
@@ -261,7 +261,7 @@ class TestGetSynthesisStats:
     
 async def test_get_stats_with_data(self, client: AsyncClient, synthesis_articles):
         """Test getting stats with populated database."""
-response = await client.get("/api/v1/articles/synthesis/stats")
+        response = await client.get("/api/v1/articles/synthesis/stats")
         
         assert response.status_code == 200
         data = response.json()
@@ -298,7 +298,7 @@ response = await client.get("/api/v1/articles/synthesis/stats")
     
 async def test_get_stats_empty_database(self, client: AsyncClient, empty_database):
         """Test getting stats with no synthesis articles."""
-response = await client.get("/api/v1/articles/synthesis/stats")
+        response = await client.get("/api/v1/articles/synthesis/stats")
         
         assert response.status_code == 200
         data = response.json()
@@ -319,13 +319,13 @@ class TestSynthesisEndpointsRegression:
     
 async def test_regular_articles_endpoint_still_works(self, client: AsyncClient, synthesis_articles):
         """Ensure /articles endpoint is not affected."""
-response = await client.get("/api/v1/articles")
+        response = await client.get("/api/v1/articles")
         
         # Should work regardless of synthesis endpoints
         assert response.status_code in [200, 404, 422]  # Depends on auth/implementation
     
 async def test_health_endpoint_still_works(self, client: AsyncClient):
         """Ensure health check endpoint still works."""
-response = await client.get("/api/v1/health")
+        response = await client.get("/api/v1/health")
         
         assert response.status_code == 200

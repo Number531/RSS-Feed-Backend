@@ -7,7 +7,6 @@ from uuid import UUID
 
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
 from app.models.article import Article
 from app.models.rss_source import RSSSource
@@ -18,6 +17,58 @@ class SynthesisService:
     
     def __init__(self, db: AsyncSession):
         self.db = db
+    
+    def _transform_margin_notes(self, raw_notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Transform margin notes from database format to frontend contract.
+        
+        Converts:
+        - location: "paragraph_X" (string) → paragraph_number: X (int)
+        - Adds type field with default "context" if missing
+        - Handles both old format (location) and new format (paragraph_number)
+        
+        Args:
+            raw_notes: Margin notes from database JSONB
+        
+        Returns:
+            Transformed margin notes matching frontend contract
+        """
+        if not raw_notes:
+            return []
+        
+        transformed = []
+        note_types = ["evidence", "context", "clarification"]
+        
+        for i, note in enumerate(raw_notes):
+            # Check if already in new format with paragraph_number
+            if "paragraph_number" in note:
+                paragraph_num = note["paragraph_number"]
+            else:
+                # Legacy format: extract from location string
+                location = note.get("location", "paragraph_0")
+                if isinstance(location, str) and location.startswith("paragraph_"):
+                    try:
+                        paragraph_num = int(location.split("_")[1])
+                    except (IndexError, ValueError):
+                        paragraph_num = 0  # fallback for invalid format
+                elif isinstance(location, int):
+                    # Already an integer (future-proof)
+                    paragraph_num = location
+                else:
+                    paragraph_num = 0  # fallback
+            
+            # Assign type if missing (rotate through types for variety)
+            note_type = note.get("type")
+            if not note_type or note_type not in note_types:
+                note_type = note_types[i % len(note_types)]
+            
+            transformed.append({
+                "paragraph_number": paragraph_num,
+                "note": note.get("note", ""),
+                "type": note_type
+            })
+        
+        return transformed
     
     async def list_synthesis_articles(
         self,
@@ -181,8 +232,11 @@ class SynthesisService:
         article_data = row.article_data or {}
         references = article_data.get("references", [])
         event_timeline = article_data.get("event_timeline", [])
-        margin_notes = article_data.get("margin_notes", [])
+        raw_margin_notes = article_data.get("margin_notes", [])
         context_and_emphasis = article_data.get("context_and_emphasis", [])
+        
+        # Transform margin notes to match frontend contract
+        margin_notes = self._transform_margin_notes(raw_margin_notes)
         
         # Convert to dict with JSONB arrays
         return {

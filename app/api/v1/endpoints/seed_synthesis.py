@@ -205,16 +205,19 @@ This article demonstrates {'strong' if verdict_idx < 2 else 'moderate' if verdic
             ],
             "margin_notes": [
                 {
-                    "location": "paragraph_2",
-                    "note": "Important context: This development builds on previous policy changes."
+                    "paragraph_number": 2,
+                    "note": "Important context: This development builds on previous policy changes.",
+                    "type": "context"
                 },
                 {
-                    "location": "paragraph_5",
-                    "note": "Cross-reference: See related analysis in [Article XYZ]"
+                    "paragraph_number": 5,
+                    "note": "Cross-reference: See related analysis in [Article XYZ]",
+                    "type": "evidence"
                 },
                 {
-                    "location": "paragraph_8",
-                    "note": "Expert perspective: Dr. Smith notes this is unprecedented."
+                    "paragraph_number": 8,
+                    "note": "Expert perspective: Dr. Smith notes this is unprecedented.",
+                    "type": "clarification"
                 }
             ],
             "context_and_emphasis": [

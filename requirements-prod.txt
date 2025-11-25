@@ -83,6 +83,9 @@ slowapi>=0.1.9
 # Fixed: JWE zip bomb DoS, JWS segment DoS, critical header bypass
 authlib>=1.6.5
 
+# Microsoft Authentication Library for Python
+msal>=1.32.0
+
 # ============================================================================
 # EXTERNAL SERVICES
 # ============================================================================

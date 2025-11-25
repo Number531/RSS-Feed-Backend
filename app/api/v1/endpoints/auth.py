@@ -32,6 +32,7 @@ from app.schemas.user import (
     VerifyEmailRequest,
 )
 from app.services.email_service import email_service
+from app.services.graph_email_service import graph_email_service
 
 router = APIRouter()
 
@@ -90,26 +91,36 @@ async def register(
             detail=str(e)
         )
     
-    # Send verification email (if SMTP configured)
-    if settings.EMAIL_VERIFICATION_REQUIRED or settings.SMTP_HOST:
+    # Send verification email (if configured)
+    # Use Graph API if configured, fallback to SMTP
+    email_configured = settings.USE_GRAPH_API and settings.MICROSOFT_CLIENT_ID or settings.SMTP_HOST
+    if settings.EMAIL_VERIFICATION_REQUIRED or email_configured:
         try:
             verification_token = generate_verification_token()
             await store_verification_token(user.id, verification_token)
-            await email_service.send_verification_email(
-                to_email=user.email,
-                username=user.username,
-                verification_token=verification_token
-            )
-            import logging
-            logger = logging.getLogger(__name__)
+            
+            # Choose email service based on configuration
+            if settings.USE_GRAPH_API and settings.MICROSOFT_CLIENT_ID:
+                logger.info("Using Microsoft Graph API for email delivery")
+                await graph_email_service.send_verification_email(
+                    to_email=user.email,
+                    username=user.username,
+                    verification_token=verification_token
+                )
+            else:
+                logger.info("Using SMTP for email delivery")
+                await email_service.send_verification_email(
+                    to_email=user.email,
+                    username=user.username,
+                    verification_token=verification_token
+                )
+            
             logger.info(
                 f"Verification email sent to {user.email}",
                 extra={"user_id": str(user.id), "email": user.email}
             )
         except Exception as e:
             # Log but don't fail registration if email fails
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(
                 f"Failed to send verification email: {e}",
                 extra={"user_id": str(user.id), "email": user.email}
@@ -332,11 +343,22 @@ async def resend_verification(
     try:
         verification_token = generate_verification_token()
         await store_verification_token(user.id, verification_token)
-        await email_service.send_verification_email(
-            to_email=user.email,
-            username=user.username,
-            verification_token=verification_token
-        )
+        
+        # Choose email service based on configuration
+        if settings.USE_GRAPH_API and settings.MICROSOFT_CLIENT_ID:
+            logger.info("Using Microsoft Graph API for email delivery")
+            await graph_email_service.send_verification_email(
+                to_email=user.email,
+                username=user.username,
+                verification_token=verification_token
+            )
+        else:
+            logger.info("Using SMTP for email delivery")
+            await email_service.send_verification_email(
+                to_email=user.email,
+                username=user.username,
+                verification_token=verification_token
+            )
         
         logger.info(
             f"Resent verification email to {user.email}",

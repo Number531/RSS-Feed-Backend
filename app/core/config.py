@@ -116,7 +116,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 100
     RATE_LIMIT_UNAUTHENTICATED: int = 20
     
-    # Email Settings
+    # Email Settings (SMTP - Legacy)
     SMTP_HOST: Optional[str] = None
     SMTP_PORT: int = 587
     SMTP_USER: Optional[str] = None
@@ -124,6 +124,14 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str = "noreply@example.com"
     SMTP_FROM_NAME: str = "RSS News Aggregator"
     SMTP_USE_TLS: bool = True
+    
+    # Microsoft Graph API Settings (Preferred for production)
+    MICROSOFT_CLIENT_ID: Optional[str] = None
+    MICROSOFT_CLIENT_SECRET: Optional[str] = None
+    MICROSOFT_TENANT_ID: Optional[str] = None
+    MICROSOFT_SENDER_EMAIL: Optional[str] = None  # Outlook/Office 365 email address
+    MICROSOFT_SENDER_NAME: str = "RSS News Aggregator"
+    USE_GRAPH_API: bool = False  # Set to True to use Microsoft Graph API instead of SMTP
     
     # Email Verification
     EMAIL_VERIFICATION_REQUIRED: bool = False  # Set to True to enforce verification

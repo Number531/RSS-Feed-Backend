@@ -92,8 +92,18 @@ A modern, production-ready FastAPI backend for RSS feed aggregation with Reddit-
 - **Redis Caching** - Fast data access, session management, and rate limiting
 - **Celery Workers** - Background task processing
 - **Enterprise Security** - Rate limiting, email verification, password strength, audit logging
+- **Production Hardening** - Config validators, security headers, request size limits (NEW)
 - **Monitoring Ready** - Prometheus metrics & Sentry integration
 - **CI/CD Pipelines** - Automated testing and deployment
+
+### 🛡️ Middleware Stack (6 Layers)
+
+1. **SecurityHeadersMiddleware** - Adds 5 security headers (X-Frame-Options, CSP, HSTS, etc.)
+2. **RequestSizeLimitMiddleware** - Enforces 10MB limit, prevents DoS attacks
+3. **RequestIDMiddleware** - Request tracking and tracing
+4. **RateLimitMiddleware** - Per-IP rate limiting with Redis
+5. **CORSMiddleware** - Cross-origin resource sharing
+6. **PrometheusInstrumentatorMiddleware** - Metrics collection
 
 ---
 
@@ -176,6 +186,10 @@ Our user registration system implements multiple layers of security to protect a
 - **Race Condition Protection**: Database constraints + proper error handling
 - **CORS Configuration**: Controlled cross-origin access
 - **SQL Injection Protection**: SQLAlchemy ORM with parameterized queries
+- **Production Config Validation**: 7 critical checks + 3 warnings (NEW)
+- **Security Headers**: 5 industry-standard headers (X-Frame-Options, CSP, etc.) (NEW)
+- **Request Size Limits**: 10MB DoS protection (NEW)
+- **Graph API Token Refresh**: 5-minute buffer prevents email failures (NEW)
 
 ### Security Test Coverage
 
@@ -449,11 +463,18 @@ See [STAGING_DEPLOYMENT_READINESS.md](./STAGING_DEPLOYMENT_READINESS.md) for ful
 **Pre-deployment checklist:**
 - [ ] Run security audit: `./scripts/security_audit.sh`
 - [ ] Verify tests pass: `pytest`
-- [ ] Update environment variables
+- [ ] Update environment variables (see production validators)
+- [ ] ✨ **NEW: Review [PRODUCTION_READINESS_REVIEW.md](./PRODUCTION_READINESS_REVIEW.md)**
+- [ ] Set `ENVIRONMENT=production` (triggers config validation)
+- [ ] Change `ADMIN_PASSWORD` from default
+- [ ] Generate strong `SECRET_KEY` (32+ chars)
+- [ ] Use `https://` for `FRONTEND_URL`
+- [ ] Enable `EMAIL_VERIFICATION_REQUIRED=true`
+- [ ] Configure `SENTRY_DSN` for error tracking
 - [ ] Set up monitoring (Sentry, Prometheus)
 - [ ] Configure backups
 
-See [PRODUCTION_DEPLOYMENT_CHECKLIST.md](./PRODUCTION_DEPLOYMENT_CHECKLIST.md).
+See [PRODUCTION_READINESS_REVIEW.md](./PRODUCTION_READINESS_REVIEW.md) for comprehensive production hardening details.
 
 ---
 
@@ -503,10 +524,13 @@ We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 - ✅ JWT authentication with refresh tokens
 - ✅ Password hashing with bcrypt
 - ✅ CORS configuration
-- ✅ Rate limiting
+- ✅ Rate limiting (per-IP + Redis-backed)
 - ✅ SQL injection protection (SQLAlchemy ORM)
-- ✅ XSS protection
-- ✅ Security headers
+- ✅ XSS protection (security headers)
+- ✅ **Production-grade security headers** (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, HSTS, CSP)
+- ✅ **Request size limits** (10MB DoS protection)
+- ✅ **Production config validators** (prevents insecure deployments)
+- ✅ **Automated token refresh** (Graph API email reliability)
 - ✅ Dependency vulnerability scanning
 
 ### Security Audit
@@ -531,9 +555,21 @@ Do not open public issues for security concerns.
 |-----------|--------|----------|
 | API Endpoints | ✅ Complete | 60/60 |
 | Test Suite | ✅ Passing | 95% |
-| Security | ✅ Audited | Strong |
+| Security | ✅ **Production Hardened** | Strong |
+| **Production Readiness** | ✅ **Enhanced** | **NEW** |
 | Documentation | ✅ Comprehensive | 80+ docs |
 | CI/CD | ✅ Automated | GitHub Actions |
+
+### ✨ Latest Enhancement: Production Readiness (Nov 2025)
+
+**Status**: All tests passed ✅ - [View Report](./PRODUCTION_READINESS_REVIEW.md)
+
+- ✅ Production config validators (7 critical checks)
+- ✅ Security headers middleware (5 headers)
+- ✅ Request size limit middleware (10MB DoS protection)
+- ✅ Dockerfile hardening (requirements-prod.txt)
+- ✅ Graph API token refresh (5-min buffer)
+- ✅ Comprehensive testing & documentation
 
 ### Roadmap
 

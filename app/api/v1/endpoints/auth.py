@@ -162,7 +162,10 @@ async def login(login_data: UserLogin, db: AsyncSession = Depends(get_db)):
     if settings.EMAIL_VERIFICATION_REQUIRED and not user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Please verify your email address before logging in. Check your inbox for the verification link."
+            detail={
+                "message": "Please verify your email address before logging in. Check your inbox for the verification link.",
+                "email_not_verified": True
+            }
         )
 
     # Update last login

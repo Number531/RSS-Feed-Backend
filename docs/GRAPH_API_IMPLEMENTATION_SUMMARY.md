@@ -101,7 +101,7 @@ SMTP fails these requirements:
 ```
 Application (Client) ID: cd54bdd1-062a-4838-a27b-a89902ae112e
 Directory (Tenant) ID: 09c43c16-90f6-4e5f-be39-684cff80debf
-Client Secret: ~1E8Q~eT7NSirOQXRtwou6yhfKUW8MJe3CPu2c4d
+Client Secret: your-client-secret-here
 Secret Expires: November 24, 2027
 API Permission: Mail.Send (Application, Admin Consent: ✅ Required)
 ```
@@ -112,7 +112,7 @@ Add to `.env`:
 
 ```bash
 MICROSOFT_CLIENT_ID=cd54bdd1-062a-4838-a27b-a89902ae112e
-MICROSOFT_CLIENT_SECRET=~1E8Q~eT7NSirOQXRtwou6yhfKUW8MJe3CPu2c4d
+MICROSOFT_CLIENT_SECRET=your-client-secret-here
 MICROSOFT_TENANT_ID=09c43c16-90f6-4e5f-be39-684cff80debf
 MICROSOFT_SENDER_EMAIL=<user's-outlook-email>  # UPDATE THIS!
 MICROSOFT_SENDER_NAME=RSS News Aggregator

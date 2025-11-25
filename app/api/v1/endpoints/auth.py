@@ -173,8 +173,6 @@ async def login(login_data: UserLogin, db: AsyncSession = Depends(get_db)):
     access_token = create_access_token(user.id, user.email)
     refresh_token = create_refresh_token(user.id)
 
-    from app.core.config import settings
-
     return Token(
         access_token=access_token,
         refresh_token=refresh_token,

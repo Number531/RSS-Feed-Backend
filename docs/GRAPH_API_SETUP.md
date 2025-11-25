@@ -86,7 +86,7 @@ Directory (tenant) ID: 09c43c16-90f6-4e5f-be39-684cff80debf
 4. Click **Add**
 5. **IMMEDIATELY COPY** the secret value:
    ```
-   Value: ~1E8Q~eT7NSirOQXRtwou6yhfKUW8MJe3CPu2c4d
+   Value: your-client-secret-here
    Secret ID: b8a5e441-e00a-4b45-b59d-8acb9e063e0a
    ```
    ⚠️ **This value is only shown ONCE!** Save it securely.
@@ -118,7 +118,7 @@ Copy the settings from `.env.graph-api` to your main `.env` file:
 ```bash
 # Microsoft Graph API Settings
 MICROSOFT_CLIENT_ID=cd54bdd1-062a-4838-a27b-a89902ae112e
-MICROSOFT_CLIENT_SECRET=~1E8Q~eT7NSirOQXRtwou6yhfKUW8MJe3CPu2c4d
+MICROSOFT_CLIENT_SECRET=your-client-secret-here
 MICROSOFT_TENANT_ID=09c43c16-90f6-4e5f-be39-684cff80debf
 MICROSOFT_SENDER_EMAIL=your-actual-email@outlook.com  # CHANGE THIS!
 MICROSOFT_SENDER_NAME=RSS News Aggregator
@@ -292,7 +292,7 @@ services:
 
 ```bash
 MICROSOFT_CLIENT_ID=cd54bdd1-062a-4838-a27b-a89902ae112e
-MICROSOFT_CLIENT_SECRET=~1E8Q~eT7NSirOQXRtwou6yhfKUW8MJe3CPu2c4d
+MICROSOFT_CLIENT_SECRET=your-client-secret-here
 MICROSOFT_TENANT_ID=09c43c16-90f6-4e5f-be39-684cff80debf
 MICROSOFT_SENDER_EMAIL=noreply@yourcompany.com
 ```
@@ -309,7 +309,7 @@ Add these environment variables to your cloud platform:
 
 ```
 MICROSOFT_CLIENT_ID=cd54bdd1-062a-4838-a27b-a89902ae112e
-MICROSOFT_CLIENT_SECRET=~1E8Q~eT7NSirOQXRtwou6yhfKUW8MJe3CPu2c4d
+MICROSOFT_CLIENT_SECRET=your-client-secret-here
 MICROSOFT_TENANT_ID=09c43c16-90f6-4e5f-be39-684cff80debf
 MICROSOFT_SENDER_EMAIL=noreply@yourcompany.com
 USE_GRAPH_API=true

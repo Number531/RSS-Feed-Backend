@@ -273,7 +273,8 @@ async def verify_email(
     if user.is_verified:
         return {
             "message": "Email already verified",
-            "status": "success"
+            "status": "success",
+            "email": user.email
         }
     
     # Mark user as verified
@@ -290,7 +291,8 @@ async def verify_email(
     
     return {
         "message": "Email verified successfully",
-        "status": "success"
+        "status": "success",
+        "email": user.email
     }
 
 

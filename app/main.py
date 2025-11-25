@@ -104,6 +104,16 @@ instrumentator = Instrumentator(
 instrumentator.instrument(app)
 
 
+# Add Security Headers middleware (first for all responses)
+from app.middleware.security_headers import SecurityHeadersMiddleware
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Add Request Size Limit middleware (before processing request body)
+from app.middleware.request_size_limit import RequestSizeLimitMiddleware
+
+app.add_middleware(RequestSizeLimitMiddleware)
+
 # Add Request ID middleware (before CORS)
 from app.middleware.request_id import RequestIDMiddleware
 

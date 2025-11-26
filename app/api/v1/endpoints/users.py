@@ -7,7 +7,7 @@ updating, and deleting user accounts.
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -76,6 +76,7 @@ async def get_current_user_profile(current_user: User = Depends(get_current_acti
 @limiter.limit("10/hour")
 async def update_current_user_profile(
     request: Request,
+    response: Response,
     update_data: UserUpdate,
     current_user: User = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service),
@@ -130,6 +131,7 @@ async def update_current_user_profile(
 @limiter.limit("1/hour")
 async def delete_current_user_account(
     request: Request,
+    response: Response,
     current_user: User = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service),
 ):
@@ -173,6 +175,7 @@ async def delete_current_user_account(
 @limiter.limit("30/minute")
 async def get_current_user_stats(
     request: Request,
+    response: Response,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -243,6 +246,7 @@ async def get_current_user_stats(
 @limiter.limit("5/hour")
 async def change_password(
     request: Request,
+    response: Response,
     password_data: ChangePasswordRequest,
     current_user: User = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service),

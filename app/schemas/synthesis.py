@@ -109,7 +109,7 @@ class SynthesisStatsResponse(BaseModel):
     total_synthesis_articles: int = Field(..., ge=0, description="Total articles with synthesis")
     articles_with_timeline: int = Field(..., ge=0, description="Articles with event timeline")
     articles_with_context: int = Field(..., ge=0, description="Articles with context emphasis")
-    average_credibility: float = Field(..., ge=0.0, le=1.0, description="Average fact_check_score / 100")
+    average_credibility_score: float = Field(..., ge=0.0, le=1.0, description="Average fact_check_score / 100")
     verdict_distribution: Dict[str, int] = Field(
         default_factory=dict,
         description="Count by fact_check_verdict (TRUE, MOSTLY TRUE, etc.)"

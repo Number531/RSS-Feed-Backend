@@ -64,25 +64,33 @@ class ReputationService:
             )
             
             leaderboard.append({
-                "user_id": str(user.id),
-                "username": user.username,
-                "full_name": user.full_name,
-                "avatar_url": user.avatar_url,
-                "reputation_score": reputation_score,
-                "stats": {
-                    "votes_received": user.total_votes_received,
-                    "comments_posted": user.total_comments,
-                    "bookmarks_received": user.total_bookmarks_received
+                "user": {
+                    "id": str(user.id),
+                    "username": user.username,
+                    "display_name": user.full_name,
+                    "avatar_url": user.avatar_url,
+                    "is_admin": False  # Would need to add is_admin field to User model
                 },
-                "member_since": user.created_at.isoformat() if user.created_at else None
+                "total_reputation": reputation_score,
+                "vote_count": user.total_votes_received,
+                "comment_count": user.total_comments,
+                "bookmark_count": user.total_bookmarks_received,
+                "badges": [],  # Will be populated below
+                "rank": None  # Will be populated in loop below
             })
         
         # Sort by reputation score descending
-        leaderboard.sort(key=lambda x: x["reputation_score"], reverse=True)
+        leaderboard.sort(key=lambda x: x["total_reputation"], reverse=True)
         
-        # Add rank
+        # Add rank and badges
         for i, user_data in enumerate(leaderboard[:limit], start=1):
             user_data["rank"] = i
+            # Calculate badges based on reputation and activity
+            user_data["badges"] = self._calculate_badges_for_leaderboard(
+                user_data["total_reputation"],
+                user_data["comment_count"],
+                user_data["vote_count"]
+            )
         
         return leaderboard[:limit]
 
@@ -123,19 +131,24 @@ class ReputationService:
         
         # Get user's rank from leaderboard
         leaderboard = await self.get_leaderboard(limit=1000)
-        user_rank = next((u["rank"] for u in leaderboard if u["user_id"] == user_id), None)
+        user_rank = next((u["rank"] for u in leaderboard if u["user"]["id"] == user_id), None)
         
         return {
-            "user_id": user_id,
-            "username": user.username,
-            "reputation_score": reputation_score,
-            "rank": user_rank,
-            "stats": {
-                "votes_received": votes_count,
-                "comments_posted": comments_count,
-                "bookmarks_received": bookmarks_count
+            "user": {
+                "id": user_id,
+                "username": user.username,
+                "display_name": user.full_name,
+                "avatar_url": user.avatar_url,
+                "is_admin": False  # Would need to add is_admin field to User model
             },
-            "badges": self._calculate_badges(reputation_score, comments_count, votes_count)
+            "total_reputation": reputation_score,
+            "vote_count": votes_count,
+            "comment_count": comments_count,
+            "bookmark_count": bookmarks_count,
+            "badges": self._calculate_badges_for_leaderboard(
+                reputation_score, comments_count, votes_count
+            ),
+            "rank": user_rank
         }
 
     def _calculate_badges(self, reputation: int, comments: int, votes: int) -> List[str]:
@@ -154,5 +167,49 @@ class ReputationService:
         
         if votes >= 50:
             badges.append("voter")
+        
+        return badges
+
+    def _calculate_badges_for_leaderboard(
+        self, reputation: int, comments: int, votes: int
+    ) -> List[Dict[str, Any]]:
+        """Calculate badges with full structure for leaderboard."""
+        badges = []
+        from datetime import datetime
+        
+        now = datetime.utcnow().isoformat()
+        
+        if reputation >= 1000:
+            badges.append({
+                "type": "expert",
+                "name": "Expert",
+                "earned_at": now
+            })
+        elif reputation >= 500:
+            badges.append({
+                "type": "veteran",
+                "name": "Veteran",
+                "earned_at": now
+            })
+        elif reputation >= 100:
+            badges.append({
+                "type": "contributor",
+                "name": "Contributor",
+                "earned_at": now
+            })
+        
+        if comments >= 100:
+            badges.append({
+                "type": "commentator",
+                "name": "Commentator",
+                "earned_at": now
+            })
+        
+        if votes >= 50:
+            badges.append({
+                "type": "voter",
+                "name": "Voter",
+                "earned_at": now
+            })
         
         return badges

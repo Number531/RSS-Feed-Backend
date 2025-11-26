@@ -315,14 +315,14 @@ class SynthesisService:
         avg_words = int(stats.avg_words) if stats.avg_words is not None else 0
         avg_minutes = int(stats.avg_minutes) if stats.avg_minutes is not None else 0
         
-        # Convert score to 0-1 range for average_credibility (fact_check_score is 0-100)
-        average_credibility = avg_score / 100.0 if avg_score > 0 else 0.0
+        # Convert score to 0-1 range for average_credibility_score (fact_check_score is 0-100)
+        average_credibility_score = avg_score / 100.0 if avg_score > 0 else 0.0
         
         return {
             "total_synthesis_articles": total,
             "articles_with_timeline": with_timeline,
             "articles_with_context": with_context,
-            "average_credibility": average_credibility,
+            "average_credibility_score": average_credibility_score,
             "verdict_distribution": verdict_distribution,
             "average_word_count": avg_words,
             "average_read_minutes": avg_minutes

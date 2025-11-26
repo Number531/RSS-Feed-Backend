@@ -52,6 +52,9 @@ class ArticleResponse(ArticleBase):
     # User interaction (if authenticated)
     user_vote: Optional[int] = None  # -1, 0, or 1
 
+    # Synthesis/Fact-check status
+    has_synthesis: Optional[bool] = None  # Whether article has synthesis/fact-check data
+
     # Full article content (from Railway API)
     crawled_content: Optional[str] = None  # Raw scraped content
     article_data: Optional[Dict[str, Any]] = None  # Structured Railway article data (JSON)

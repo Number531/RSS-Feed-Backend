@@ -8,7 +8,7 @@ updates, and deletion.
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
@@ -41,7 +41,7 @@ class UserRepository:
 
     async def get_by_email(self, email: str) -> Optional[User]:
         """
-        Get user by email.
+        Get user by email (case-insensitive).
 
         Args:
             email: User email address
@@ -49,7 +49,9 @@ class UserRepository:
         Returns:
             User instance or None if not found
         """
-        result = await self.db.execute(select(User).where(User.email == email))
+        result = await self.db.execute(
+            select(User).where(func.lower(User.email) == func.lower(email))
+        )
         return result.scalar_one_or_none()
 
     async def get_by_username(self, username: str) -> Optional[User]:
@@ -157,7 +159,7 @@ class UserRepository:
 
     async def email_exists(self, email: str, exclude_user_id: Optional[UUID] = None) -> bool:
         """
-        Check if email is already taken by another user.
+        Check if email is already taken by another user (case-insensitive).
 
         Args:
             email: Email to check
@@ -166,7 +168,7 @@ class UserRepository:
         Returns:
             True if email exists, False otherwise
         """
-        query = select(User).where(User.email == email)
+        query = select(User).where(func.lower(User.email) == func.lower(email))
 
         if exclude_user_id:
             query = query.where(User.id != exclude_user_id)

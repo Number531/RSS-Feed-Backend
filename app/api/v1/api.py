@@ -17,6 +17,8 @@ from app.api.v1.endpoints import (
     reputation,
     rss_feeds,
     search,
+    seed_synthesis,
+    synthesis,
     users,
     votes,
 )
@@ -24,11 +26,15 @@ from app.api.v1.endpoints import (
 api_router = APIRouter()
 
 # Include all endpoint routers
+api_router.include_router(seed_synthesis.router, prefix="/dev", tags=["development"])
 api_router.include_router(auth.router, prefix="/auth", tags=["authentication"])
 api_router.include_router(search.router, tags=["search"])  # Search & discovery endpoints
 api_router.include_router(rss_feeds.router)  # Already has prefix and tags in router definition
 api_router.include_router(votes.router, prefix="/votes", tags=["votes"])
 api_router.include_router(comments.router, prefix="/comments", tags=["comments"])
+# IMPORTANT: synthesis router MUST come before articles router to avoid route conflicts
+# The articles router has a catch-all /{article_id} route that would match /synthesis
+api_router.include_router(synthesis.router, prefix="/articles", tags=["synthesis"])
 api_router.include_router(articles.router, prefix="/articles", tags=["articles"])
 api_router.include_router(
     fact_check.router, tags=["fact-check"]

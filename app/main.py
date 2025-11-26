@@ -104,10 +104,30 @@ instrumentator = Instrumentator(
 instrumentator.instrument(app)
 
 
+# Add Security Headers middleware (first for all responses)
+from app.middleware.security_headers import SecurityHeadersMiddleware
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Add Request Size Limit middleware (before processing request body)
+from app.middleware.request_size_limit import RequestSizeLimitMiddleware
+
+app.add_middleware(RequestSizeLimitMiddleware)
+
 # Add Request ID middleware (before CORS)
 from app.middleware.request_id import RequestIDMiddleware
 
 app.add_middleware(RequestIDMiddleware)
+
+# Add Rate Limit middleware (after Request ID)
+from app.middleware.rate_limit import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure CORS
 app.add_middleware(

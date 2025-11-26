@@ -92,6 +92,7 @@ async def get_articles_feed(
             "comment_count": article.comment_count,
             "tags": article.tags or [],
             "user_vote": getattr(article, "user_vote", None),  # Include if authenticated
+            "has_synthesis": article.has_synthesis,  # Synthesis/fact-check availability
         }
         for article in articles
     ]
@@ -156,6 +157,7 @@ async def search_articles(
             "comment_count": article.comment_count,
             "tags": article.tags or [],
             "user_vote": None,  # Search doesn't include user votes
+            "has_synthesis": article.has_synthesis,  # Synthesis/fact-check availability
         }
         for article in articles
     ]
@@ -295,6 +297,7 @@ async def get_article_full(
             "vote_count": article.vote_count,
             "comment_count": article.comment_count,
             "tags": article.tags or [],
+            "has_synthesis": article.has_synthesis,
             "crawled_content": article.crawled_content,
             "article_data": article.article_data,
         },
@@ -368,4 +371,5 @@ async def get_article(
         comment_count=article.comment_count,
         tags=article.tags or [],
         user_vote=getattr(article, "user_vote", None),
+        has_synthesis=article.has_synthesis,
     )

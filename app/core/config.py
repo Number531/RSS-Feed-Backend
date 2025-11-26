@@ -115,6 +115,31 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 100
     RATE_LIMIT_UNAUTHENTICATED: int = 20
+    
+    # Request Size Limiting
+    MAX_REQUEST_SIZE: int = 10 * 1024 * 1024  # 10MB in bytes
+    
+    # Email Settings (SMTP - Legacy)
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM_EMAIL: str = "noreply@example.com"
+    SMTP_FROM_NAME: str = "RSS News Aggregator"
+    SMTP_USE_TLS: bool = True
+    
+    # Microsoft Graph API Settings (Preferred for production)
+    MICROSOFT_CLIENT_ID: Optional[str] = None
+    MICROSOFT_CLIENT_SECRET: Optional[str] = None
+    MICROSOFT_TENANT_ID: Optional[str] = None
+    MICROSOFT_SENDER_EMAIL: Optional[str] = None  # Outlook/Office 365 email address
+    MICROSOFT_SENDER_NAME: str = "RSS News Aggregator"
+    USE_GRAPH_API: bool = False  # Set to True to use Microsoft Graph API instead of SMTP
+    
+    # Email Verification
+    EMAIL_VERIFICATION_REQUIRED: bool = False  # Set to True to enforce verification
+    FRONTEND_URL: str = "http://localhost:3000"  # For verification links
+    VERIFICATION_TOKEN_EXPIRE_HOURS: int = 1
 
     # Logging
     LOG_LEVEL: str = "INFO"
@@ -146,6 +171,7 @@ class Settings(BaseSettings):
             return
 
         errors = []
+        warnings = []
 
         # Check DEBUG is disabled
         if self.DEBUG:
@@ -163,9 +189,66 @@ class Settings(BaseSettings):
         if not self.ADMIN_EMAIL or not self.ADMIN_USERNAME or not self.ADMIN_PASSWORD:
             errors.append("Admin credentials must be set via environment variables")
 
+        # Check ADMIN_PASSWORD is not the example default
+        if self.ADMIN_PASSWORD == "changeme123!-MUST-CHANGE-IN-PRODUCTION":
+            errors.append(
+                "ADMIN_PASSWORD is still set to example value from .env.example. "
+                "Generate a secure password for production."
+            )
+
+        # Check SECRET_KEY is not the example default
+        example_secret_keys = [
+            "your-secret-key-here-change-in-production-min-32-chars",
+            "your-secret-key-here",
+        ]
+        if any(self.SECRET_KEY == example for example in example_secret_keys):
+            errors.append(
+                "SECRET_KEY is still set to example value from .env.example. "
+                'Generate a secure key with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
+            )
+
         # Check SECRET_KEY is strong (additional check beyond validator)
         if len(self.SECRET_KEY) < 32:
             errors.append("SECRET_KEY must be at least 32 characters")
+
+        # Check FRONTEND_URL is https in production
+        if self.FRONTEND_URL.startswith("http://") and not any(
+            local in self.FRONTEND_URL for local in localhost_origins
+        ):
+            errors.append(
+                f"FRONTEND_URL must use https:// in production, got: {self.FRONTEND_URL}"
+            )
+
+        # Check EMAIL_VERIFICATION_REQUIRED is enabled in production
+        if not self.EMAIL_VERIFICATION_REQUIRED:
+            warnings.append(
+                "EMAIL_VERIFICATION_REQUIRED is False in production. "
+                "Consider enabling email verification to prevent spam accounts."
+            )
+
+        # Warn if SENTRY_DSN is not configured
+        if not self.SENTRY_DSN:
+            warnings.append(
+                "SENTRY_DSN is not configured. Error tracking and alerts will not work in production."
+            )
+
+        # Validate DATABASE_POOL_SIZE
+        # Most cloud databases (RDS, Cloud SQL) have max connections of 100-1000
+        # We should stay under 80% of typical limits
+        if self.DATABASE_POOL_SIZE > 80:
+            warnings.append(
+                f"DATABASE_POOL_SIZE ({self.DATABASE_POOL_SIZE}) is high. "
+                "Ensure your database supports this many connections (recommend < 80% of max_connections)."
+            )
+
+        # Log warnings to stderr
+        if warnings:
+            import sys
+
+            warning_msg = "Production configuration warnings:\n" + "\n".join(
+                f"  ⚠️  {w}" for w in warnings
+            )
+            print(warning_msg, file=sys.stderr)
 
         if errors:
             error_msg = "Production configuration validation failed:\n" + "\n".join(

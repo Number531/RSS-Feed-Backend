@@ -120,12 +120,11 @@ from app.middleware.request_id import RequestIDMiddleware
 app.add_middleware(RequestIDMiddleware)
 
 # Add Rate Limit middleware (after Request ID)
-from app.middleware.rate_limit import limiter, RateLimitMiddleware
+from app.middleware.rate_limit import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 app.state.limiter = limiter
-app.add_middleware(RateLimitMiddleware)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure CORS

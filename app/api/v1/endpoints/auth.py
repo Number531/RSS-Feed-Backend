@@ -5,7 +5,7 @@ Authentication API endpoints.
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_user_service
@@ -144,8 +144,10 @@ async def login(login_data: UserLogin, db: AsyncSession = Depends(get_db)):
     Raises:
         HTTPException: If credentials are invalid
     """
-    # Find user by email
-    result = await db.execute(select(User).where(User.email == login_data.email))
+    # Find user by email (case-insensitive)
+    result = await db.execute(
+        select(User).where(func.lower(User.email) == func.lower(login_data.email))
+    )
     user = result.scalar_one_or_none()
 
     if not user or not user.verify_password(login_data.password):
@@ -324,8 +326,10 @@ async def resend_verification(
     import logging
     logger = logging.getLogger(__name__)
     
-    # Find user by email
-    result = await db.execute(select(User).where(User.email == resend_data.email))
+    # Find user by email (case-insensitive)
+    result = await db.execute(
+        select(User).where(func.lower(User.email) == func.lower(resend_data.email))
+    )
     user = result.scalar_one_or_none()
     
     if not user:

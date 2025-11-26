@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
 
 
 class UserBase(BaseModel):
@@ -110,6 +110,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     full_name: Optional[str] = Field(None, max_length=255)
+    display_name: Optional[str] = Field(None, max_length=255)  # Frontend compatibility: alias for full_name
     avatar_url: Optional[str] = Field(None, max_length=500)
     password: Optional[str] = Field(None, min_length=8, max_length=100)
 
@@ -125,6 +126,12 @@ class UserResponse(UserBase):
     last_login_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+    
+    @computed_field
+    @property
+    def display_name(self) -> Optional[str]:
+        """Alias for full_name to maintain frontend compatibility."""
+        return self.full_name
 
 
 class UserLogin(BaseModel):
@@ -166,3 +173,81 @@ class ResendVerificationRequest(BaseModel):
     """Schema for resending verification email."""
     
     email: EmailStr
+
+
+class ChangePasswordRequest(BaseModel):
+    """Schema for changing user password."""
+    
+    current_password: str = Field(..., min_length=1, description="Current password for verification")
+    new_password: str = Field(..., min_length=8, max_length=100, description="New password")
+    
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_strength(cls, v: str, info) -> str:
+        """
+        Validate new password meets security requirements.
+        
+        Reuses validation logic from UserCreate to ensure consistency.
+        """
+        # Check for uppercase letter
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        
+        # Check for lowercase letter
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        
+        # Check for digit
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
+        
+        # Check for special character
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>_\-+=\[\]\\;'/`~]", v):
+            raise ValueError(
+                "Password must contain at least one special character (!@#$%^&* etc.)"
+            )
+        
+        # List of common weak passwords
+        weak_password_bases = {
+            "password",
+            "12345678",
+            "123456789",
+            "1234567890",
+            "qwerty",
+            "letmein",
+            "welcome",
+            "admin",
+            "iloveyou",
+            "monkey",
+            "dragon",
+            "master",
+            "sunshine",
+            "princess",
+            "shadow",
+            "superman",
+            "michael",
+        }
+        
+        # Check if password contains any weak base words
+        password_lower = v.lower()
+        for weak_base in weak_password_bases:
+            if weak_base in password_lower:
+                raise ValueError("Password is too common. Please choose a stronger password")
+        
+        return v
+
+
+class ChangePasswordResponse(BaseModel):
+    """Schema for password change response."""
+    
+    message: str
+    updated_at: datetime
+
+
+class UserStatsResponse(BaseModel):
+    """Schema for user statistics response."""
+    
+    total_votes: int = Field(..., description="Total votes cast by user")
+    total_comments: int = Field(..., description="Total comments posted by user")
+    bookmarks_count: int = Field(..., description="Total articles bookmarked")
+    reading_history_count: int = Field(..., description="Total articles read")

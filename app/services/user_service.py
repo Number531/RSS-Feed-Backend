@@ -247,6 +247,10 @@ class UserService(BaseService):
                 raise NotFoundError(f"User with ID {user_id} not found")
 
             update_dict = update_data.model_dump(exclude_unset=True)
+            
+            # Map display_name to full_name for frontend compatibility
+            if "display_name" in update_dict:
+                update_dict["full_name"] = update_dict.pop("display_name")
 
             # Validate email uniqueness if being updated
             if "email" in update_dict:
@@ -414,3 +418,56 @@ class UserService(BaseService):
                 username=username,
                 success=success,
             )
+    
+    async def change_password(
+        self,
+        user_id: UUID,
+        current_password: str,
+        new_password: str
+    ) -> User:
+        """
+        Change user password with verification.
+        
+        Args:
+            user_id: User UUID
+            current_password: Current password for verification
+            new_password: New password to set
+            
+        Returns:
+            Updated user instance
+            
+        Raises:
+            NotFoundError: If user doesn't exist
+            ValidationError: If current password is incorrect or new password is same
+        """
+        self.log_operation("change_password", user_id=str(user_id))
+        
+        try:
+            # Get user
+            user = await self.user_repo.get_by_id(user_id)
+            if not user:
+                raise NotFoundError(f"User with ID {user_id} not found")
+            
+            # Verify current password
+            if not user.verify_password(current_password):
+                raise ValidationError("Current password is incorrect")
+            
+            # Check new password is different
+            if user.verify_password(new_password):
+                raise ValidationError("New password cannot be the same as the current password")
+            
+            # Update password
+            updated_user = await self.user_repo.update_password(user_id, new_password)
+            
+            if not updated_user:
+                raise NotFoundError(f"User with ID {user_id} not found")
+            
+            self.log_operation("change_password_success", user_id=str(user_id))
+            
+            return updated_user
+            
+        except (NotFoundError, ValidationError):
+            raise
+        except Exception as e:
+            self.log_error("change_password", e, user_id=str(user_id))
+            raise
